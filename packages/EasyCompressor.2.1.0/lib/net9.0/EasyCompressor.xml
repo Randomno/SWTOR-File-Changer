@@ -1,0 +1,867 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>EasyCompressor</name>
+    </assembly>
+    <members>
+        <member name="T:EasyCompressor.DefaultCompressorProvider">
+            <summary>
+            Default compressor provider
+            </summary>
+            <seealso cref="T:EasyCompressor.ICompressorProvider" />
+        </member>
+        <member name="M:EasyCompressor.DefaultCompressorProvider.#ctor(System.Collections.Generic.IEnumerable{EasyCompressor.ICompressor})">
+            <summary>
+            Initializes a new instance of <see cref="T:EasyCompressor.DefaultCompressorProvider"/>
+            </summary>
+            <param name="compressors">compressors</param>
+        </member>
+        <member name="M:EasyCompressor.DefaultCompressorProvider.GetCompressor(System.String)">
+            <inheritdoc/>
+        </member>
+        <member name="T:EasyCompressor.ICompressorProvider">
+            <summary>
+            Compressor provider
+            </summary>
+        </member>
+        <member name="M:EasyCompressor.ICompressorProvider.GetCompressor(System.String)">
+            <summary>
+            Gets the compressor by name.
+            </summary>
+            <param name="name">The name.</param>
+            <returns>The compressor.</returns>
+        </member>
+        <member name="T:EasyCompressor.BaseCompressor">
+            <summary>
+            Base compressor
+            </summary>
+        </member>
+        <member name="P:EasyCompressor.BaseCompressor.Name">
+            <inheritdoc/>
+        </member>
+        <member name="P:EasyCompressor.BaseCompressor.Method">
+            <inheritdoc/>
+        </member>
+        <member name="M:EasyCompressor.BaseCompressor.BaseCompress(System.Byte[])">
+            <summary>
+            BaseCompress
+            </summary>
+            <param name="bytes">The original bytes.</param>
+            <returns>Returns compressed bytes</returns>
+        </member>
+        <member name="M:EasyCompressor.BaseCompressor.BaseDecompress(System.Byte[])">
+            <summary>
+            BaseDecompress
+            </summary>
+            <param name="compressedBytes">The compressed bytes.</param>
+            <returns>Returns uncompressed bytes</returns>
+        </member>
+        <member name="M:EasyCompressor.BaseCompressor.BaseCompress(System.IO.Stream,System.IO.Stream)">
+            <summary>
+            BaseCompress
+            </summary>
+            <param name="inputStream">The input stream.</param>
+            <param name="outputStream">The output stream.</param>
+        </member>
+        <member name="M:EasyCompressor.BaseCompressor.BaseDecompress(System.IO.Stream,System.IO.Stream)">
+            <summary>
+            BaseDecompress
+            </summary>
+            <param name="inputStream">Input stream</param>
+            <param name="outputStream">Output stream</param>
+        </member>
+        <member name="M:EasyCompressor.BaseCompressor.BaseCompressAsync(System.IO.Stream,System.IO.Stream,System.Threading.CancellationToken)">
+            <summary>
+            BaseCompressAsync
+            </summary>
+            <param name="inputStream">Input stream</param>
+            <param name="outputStream">Output stream</param>
+            <param name="cancellationToken">Cancellation token</param>
+            <returns>Task</returns>
+        </member>
+        <member name="M:EasyCompressor.BaseCompressor.BaseDecompressAsync(System.IO.Stream,System.IO.Stream,System.Threading.CancellationToken)">
+            <summary>
+            BaseDecompressAsync
+            </summary>
+            <param name="inputStream">Input stream</param>
+            <param name="outputStream">Output stream</param>
+            <param name="cancellationToken">Cancellation token</param>
+            <returns>Task</returns>
+        </member>
+        <member name="M:EasyCompressor.BaseCompressor.Compress(System.Byte[])">
+            <inheritdoc/>
+        </member>
+        <member name="M:EasyCompressor.BaseCompressor.Decompress(System.Byte[])">
+            <inheritdoc/>
+        </member>
+        <member name="M:EasyCompressor.BaseCompressor.Compress(System.IO.Stream,System.IO.Stream)">
+            <inheritdoc/>
+        </member>
+        <member name="M:EasyCompressor.BaseCompressor.Decompress(System.IO.Stream,System.IO.Stream)">
+            <inheritdoc/>
+        </member>
+        <member name="M:EasyCompressor.BaseCompressor.CompressAsync(System.IO.Stream,System.IO.Stream,System.Threading.CancellationToken)">
+            <inheritdoc/>
+        </member>
+        <member name="M:EasyCompressor.BaseCompressor.DecompressAsync(System.IO.Stream,System.IO.Stream,System.Threading.CancellationToken)">
+            <inheritdoc/>
+        </member>
+        <member name="M:EasyCompressor.BaseCompressor.ToString">
+            <inheritdoc/>
+        </member>
+        <member name="T:EasyCompressor.CompressionMethod">
+            <summary>
+            Compression method
+            </summary>
+        </member>
+        <member name="F:EasyCompressor.CompressionMethod.Deflate">
+            <summary>
+            Deflate
+            </summary>
+        </member>
+        <member name="F:EasyCompressor.CompressionMethod.GZip">
+            <summary>
+            GZip
+            </summary>
+        </member>
+        <member name="F:EasyCompressor.CompressionMethod.Brotli">
+            <summary>
+            Brotli
+            </summary>
+        </member>
+        <member name="F:EasyCompressor.CompressionMethod.ZLib">
+            <summary>
+            ZLib
+            </summary>
+        </member>
+        <member name="F:EasyCompressor.CompressionMethod.LZ4">
+            <summary>
+            LZ4
+            </summary>
+        </member>
+        <member name="F:EasyCompressor.CompressionMethod.LZMA">
+            <summary>
+            LZMA
+            </summary>
+        </member>
+        <member name="F:EasyCompressor.CompressionMethod.Snappy">
+            <summary>
+            Snappy
+            </summary>
+        </member>
+        <member name="F:EasyCompressor.CompressionMethod.Zstd">
+            <summary>
+            Zstd
+            </summary>
+        </member>
+        <member name="T:EasyCompressor.ICompressor">
+            <summary>
+            ICompressor
+            </summary>
+        </member>
+        <member name="P:EasyCompressor.ICompressor.Name">
+            <summary>
+            Compressor name
+            </summary>
+        </member>
+        <member name="P:EasyCompressor.ICompressor.Method">
+            <summary>
+            Compression method
+            </summary>
+        </member>
+        <member name="M:EasyCompressor.ICompressor.Compress(System.Byte[])">
+            <summary>
+            Compress bytes
+            </summary>
+            <param name="bytes">Bytes</param>
+            <returns>Returns compressed bytes</returns>
+        </member>
+        <member name="M:EasyCompressor.ICompressor.Decompress(System.Byte[])">
+            <summary>
+            Decompress bytes
+            </summary>
+            <param name="compressedBytes">Compressed bytes</param>
+            <returns>Returns uncompressed bytes</returns>
+        </member>
+        <member name="M:EasyCompressor.ICompressor.Compress(System.IO.Stream,System.IO.Stream)">
+            <summary>
+            Compress input stream into output stream
+            </summary>
+            <param name="inputStream">Input stream</param>
+            <param name="outputStream">Output stream</param>
+        </member>
+        <member name="M:EasyCompressor.ICompressor.Decompress(System.IO.Stream,System.IO.Stream)">
+            <summary>
+            Decompress input stream into output stream
+            </summary>
+            <param name="inputStream">Input stream</param>
+            <param name="outputStream">Output stream</param>
+        </member>
+        <member name="M:EasyCompressor.ICompressor.CompressAsync(System.IO.Stream,System.IO.Stream,System.Threading.CancellationToken)">
+            <summary>
+            Compress input stream into output stream
+            </summary>
+            <param name="inputStream">Input stream</param>
+            <param name="outputStream">Output stream</param>
+            <param name="cancellationToken">Cancellation token</param>
+        </member>
+        <member name="M:EasyCompressor.ICompressor.DecompressAsync(System.IO.Stream,System.IO.Stream,System.Threading.CancellationToken)">
+            <summary>
+            Decompress input stream into output stream
+            </summary>
+            <param name="inputStream">Input stream</param>
+            <param name="outputStream">Output stream</param>
+            <param name="cancellationToken">Cancellation token</param>
+        </member>
+        <member name="T:EasyCompressor.BrotliCompressor">
+            <summary>
+            Brotli compressor
+            </summary>
+        </member>
+        <member name="P:EasyCompressor.BrotliCompressor.Shared">
+            <summary>
+            Provides a default shared (thread-safe) instance.
+            </summary>
+        </member>
+        <member name="P:EasyCompressor.BrotliCompressor.Level">
+            <summary>
+            Compression level
+            </summary>
+        </member>
+        <member name="P:EasyCompressor.BrotliCompressor.Method">
+            <inheritdoc/>
+        </member>
+        <member name="M:EasyCompressor.BrotliCompressor.#ctor">
+            <summary>
+            Initializes a new instance of the <see cref="T:EasyCompressor.BrotliCompressor"/> class.
+            </summary>
+        </member>
+        <member name="M:EasyCompressor.BrotliCompressor.#ctor(System.String)">
+            <summary>
+            Initializes a new instance of the <see cref="T:EasyCompressor.BrotliCompressor"/> class.
+            </summary>
+            <param name="name">The name.</param>
+        </member>
+        <member name="M:EasyCompressor.BrotliCompressor.#ctor(System.IO.Compression.CompressionLevel)">
+            <summary>
+            Initializes a new instance of the <see cref="T:EasyCompressor.BrotliCompressor"/> class.
+            </summary>
+            <param name="level">Compression level (Defaults to <see cref="F:System.IO.Compression.CompressionLevel.Fastest"/>)</param>
+        </member>
+        <member name="M:EasyCompressor.BrotliCompressor.#ctor(System.String,System.IO.Compression.CompressionLevel)">
+            <summary>
+            Initializes a new instance of the <see cref="T:EasyCompressor.BrotliCompressor"/> class.
+            </summary>
+            <param name="name">The name.</param>
+            <param name="level">Compression level (Defaults to <see cref="F:System.IO.Compression.CompressionLevel.Fastest"/>)</param>
+        </member>
+        <member name="M:EasyCompressor.BrotliCompressor.BaseCompress(System.Byte[])">
+            <inheritdoc/>
+        </member>
+        <member name="M:EasyCompressor.BrotliCompressor.BaseDecompress(System.Byte[])">
+            <inheritdoc/>
+        </member>
+        <member name="M:EasyCompressor.BrotliCompressor.BaseCompress(System.IO.Stream,System.IO.Stream)">
+            <inheritdoc/>
+        </member>
+        <member name="M:EasyCompressor.BrotliCompressor.BaseDecompress(System.IO.Stream,System.IO.Stream)">
+            <inheritdoc/>
+        </member>
+        <member name="M:EasyCompressor.BrotliCompressor.BaseCompressAsync(System.IO.Stream,System.IO.Stream,System.Threading.CancellationToken)">
+            <inheritdoc/>
+        </member>
+        <member name="M:EasyCompressor.BrotliCompressor.BaseDecompressAsync(System.IO.Stream,System.IO.Stream,System.Threading.CancellationToken)">
+            <inheritdoc/>
+        </member>
+        <member name="M:EasyCompressor.BrotliCompressor.ToString">
+            <inheritdoc/>
+        </member>
+        <member name="T:EasyCompressor.DeflateCompressor">
+            <summary>
+            Deflate compressor
+            </summary>
+        </member>
+        <member name="P:EasyCompressor.DeflateCompressor.Shared">
+            <summary>
+            Provides a default shared (thread-safe) instance.
+            </summary>
+        </member>
+        <member name="P:EasyCompressor.DeflateCompressor.Level">
+            <summary>
+            Compression level
+            </summary>
+        </member>
+        <member name="P:EasyCompressor.DeflateCompressor.Method">
+            <inheritdoc/>
+        </member>
+        <member name="M:EasyCompressor.DeflateCompressor.#ctor">
+            <summary>
+            Initializes a new instance of the <see cref="T:EasyCompressor.DeflateCompressor"/> class.
+            </summary>
+        </member>
+        <member name="M:EasyCompressor.DeflateCompressor.#ctor(System.String)">
+            <summary>
+            Initializes a new instance of the <see cref="T:EasyCompressor.DeflateCompressor"/> class.
+            </summary>
+            <param name="name">The name.</param>
+        </member>
+        <member name="M:EasyCompressor.DeflateCompressor.#ctor(System.IO.Compression.CompressionLevel)">
+            <summary>
+            Initializes a new instance of the <see cref="T:EasyCompressor.DeflateCompressor"/> class.
+            </summary>
+            <param name="level">Compression level (Defaults to <see cref="F:System.IO.Compression.CompressionLevel.Fastest"/>)</param>
+        </member>
+        <member name="M:EasyCompressor.DeflateCompressor.#ctor(System.String,System.IO.Compression.CompressionLevel)">
+            <summary>
+            Initializes a new instance of the <see cref="T:EasyCompressor.DeflateCompressor"/> class.
+            </summary>
+            <param name="name">The name.</param>
+            <param name="level">Compression level (Defaults to <see cref="F:System.IO.Compression.CompressionLevel.Fastest"/>)</param>
+        </member>
+        <member name="M:EasyCompressor.DeflateCompressor.BaseCompress(System.Byte[])">
+            <inheritdoc/>
+        </member>
+        <member name="M:EasyCompressor.DeflateCompressor.BaseDecompress(System.Byte[])">
+            <inheritdoc/>
+        </member>
+        <member name="M:EasyCompressor.DeflateCompressor.BaseCompress(System.IO.Stream,System.IO.Stream)">
+            <inheritdoc/>
+        </member>
+        <member name="M:EasyCompressor.DeflateCompressor.BaseDecompress(System.IO.Stream,System.IO.Stream)">
+            <inheritdoc/>
+        </member>
+        <member name="M:EasyCompressor.DeflateCompressor.BaseCompressAsync(System.IO.Stream,System.IO.Stream,System.Threading.CancellationToken)">
+            <inheritdoc/>
+        </member>
+        <member name="M:EasyCompressor.DeflateCompressor.BaseDecompressAsync(System.IO.Stream,System.IO.Stream,System.Threading.CancellationToken)">
+            <inheritdoc/>
+        </member>
+        <member name="M:EasyCompressor.DeflateCompressor.ToString">
+            <inheritdoc/>
+        </member>
+        <member name="T:EasyCompressor.GZipCompressor">
+            <summary>
+            GZip compressor
+            </summary>
+        </member>
+        <member name="P:EasyCompressor.GZipCompressor.Shared">
+            <summary>
+            Provides a default shared (thread-safe) instance.
+            </summary>
+        </member>
+        <member name="P:EasyCompressor.GZipCompressor.Level">
+            <summary>
+            Compression level
+            </summary>
+        </member>
+        <member name="P:EasyCompressor.GZipCompressor.Method">
+            <inheritdoc/>
+        </member>
+        <member name="M:EasyCompressor.GZipCompressor.#ctor">
+            <summary>
+            Initializes a new instance of the <see cref="T:EasyCompressor.GZipCompressor"/> class.
+            </summary>
+        </member>
+        <member name="M:EasyCompressor.GZipCompressor.#ctor(System.String)">
+            <summary>
+            Initializes a new instance of the <see cref="T:EasyCompressor.GZipCompressor"/> class.
+            </summary>
+            <param name="name">The name.</param>
+        </member>
+        <member name="M:EasyCompressor.GZipCompressor.#ctor(System.IO.Compression.CompressionLevel)">
+            <summary>
+            Initializes a new instance of the <see cref="T:EasyCompressor.GZipCompressor"/> class.
+            </summary>
+            <param name="level">Compression level (Defaults to <see cref="F:System.IO.Compression.CompressionLevel.Fastest"/>)</param>
+        </member>
+        <member name="M:EasyCompressor.GZipCompressor.#ctor(System.String,System.IO.Compression.CompressionLevel)">
+            <summary>
+            Initializes a new instance of the <see cref="T:EasyCompressor.GZipCompressor"/> class.
+            </summary>
+            <param name="name">The name.</param>
+            <param name="level">Compression level (Defaults to <see cref="F:System.IO.Compression.CompressionLevel.Fastest"/>)</param>
+        </member>
+        <member name="M:EasyCompressor.GZipCompressor.BaseCompress(System.Byte[])">
+            <inheritdoc/>
+        </member>
+        <member name="M:EasyCompressor.GZipCompressor.BaseDecompress(System.Byte[])">
+            <inheritdoc/>
+        </member>
+        <member name="M:EasyCompressor.GZipCompressor.BaseCompress(System.IO.Stream,System.IO.Stream)">
+            <inheritdoc/>
+        </member>
+        <member name="M:EasyCompressor.GZipCompressor.BaseDecompress(System.IO.Stream,System.IO.Stream)">
+            <inheritdoc/>
+        </member>
+        <member name="M:EasyCompressor.GZipCompressor.BaseCompressAsync(System.IO.Stream,System.IO.Stream,System.Threading.CancellationToken)">
+            <inheritdoc/>
+        </member>
+        <member name="M:EasyCompressor.GZipCompressor.BaseDecompressAsync(System.IO.Stream,System.IO.Stream,System.Threading.CancellationToken)">
+            <inheritdoc/>
+        </member>
+        <member name="M:EasyCompressor.GZipCompressor.ToString">
+            <inheritdoc/>
+        </member>
+        <member name="T:EasyCompressor.ZLibCompressor">
+            <summary>
+            ZLib compressor
+            </summary>
+        </member>
+        <member name="P:EasyCompressor.ZLibCompressor.Shared">
+            <summary>
+            Provides a default shared (thread-safe) instance.
+            </summary>
+        </member>
+        <member name="P:EasyCompressor.ZLibCompressor.Level">
+            <summary>
+            Compression level
+            </summary>
+        </member>
+        <member name="P:EasyCompressor.ZLibCompressor.Method">
+            <inheritdoc/>
+        </member>
+        <member name="M:EasyCompressor.ZLibCompressor.#ctor">
+            <summary>
+            Initializes a new instance of the <see cref="T:EasyCompressor.ZLibCompressor"/> class.
+            </summary>
+        </member>
+        <member name="M:EasyCompressor.ZLibCompressor.#ctor(System.String)">
+            <summary>
+            Initializes a new instance of the <see cref="T:EasyCompressor.ZLibCompressor"/> class.
+            </summary>
+            <param name="name">The name.</param>
+        </member>
+        <member name="M:EasyCompressor.ZLibCompressor.#ctor(System.IO.Compression.CompressionLevel)">
+            <summary>
+            Initializes a new instance of the <see cref="T:EasyCompressor.ZLibCompressor"/> class.
+            </summary>
+            <param name="level">Compression level (Defaults to <see cref="F:System.IO.Compression.CompressionLevel.Fastest"/>)</param>
+        </member>
+        <member name="M:EasyCompressor.ZLibCompressor.#ctor(System.String,System.IO.Compression.CompressionLevel)">
+            <summary>
+            Initializes a new instance of the <see cref="T:EasyCompressor.ZLibCompressor"/> class.
+            </summary>
+            <param name="name">The name.</param>
+            <param name="level">Compression level (Defaults to <see cref="F:System.IO.Compression.CompressionLevel.Fastest"/>)</param>
+        </member>
+        <member name="M:EasyCompressor.ZLibCompressor.BaseCompress(System.Byte[])">
+            <inheritdoc/>
+        </member>
+        <member name="M:EasyCompressor.ZLibCompressor.BaseDecompress(System.Byte[])">
+            <inheritdoc/>
+        </member>
+        <member name="M:EasyCompressor.ZLibCompressor.BaseCompress(System.IO.Stream,System.IO.Stream)">
+            <inheritdoc/>
+        </member>
+        <member name="M:EasyCompressor.ZLibCompressor.BaseDecompress(System.IO.Stream,System.IO.Stream)">
+            <inheritdoc/>
+        </member>
+        <member name="M:EasyCompressor.ZLibCompressor.BaseCompressAsync(System.IO.Stream,System.IO.Stream,System.Threading.CancellationToken)">
+            <inheritdoc/>
+        </member>
+        <member name="M:EasyCompressor.ZLibCompressor.BaseDecompressAsync(System.IO.Stream,System.IO.Stream,System.Threading.CancellationToken)">
+            <inheritdoc/>
+        </member>
+        <member name="M:EasyCompressor.ZLibCompressor.ToString">
+            <inheritdoc/>
+        </member>
+        <member name="T:EasyCompressor.BrotliUtils">
+            <summary>
+            BrotliUtils
+            </summary>
+        </member>
+        <member name="F:EasyCompressor.BrotliUtils.WindowBits_Min">
+            <summary>
+            The window bits minimum
+            </summary>
+        </member>
+        <member name="F:EasyCompressor.BrotliUtils.WindowBits_Default">
+            <summary>
+            The window bits default
+            </summary>
+        </member>
+        <member name="F:EasyCompressor.BrotliUtils.WindowBits_Max">
+            <summary>
+            The window bits maximum
+            </summary>
+        </member>
+        <member name="F:EasyCompressor.BrotliUtils.Quality_Min">
+            <summary>
+            The quality minimum
+            </summary>
+        </member>
+        <member name="F:EasyCompressor.BrotliUtils.Quality_Default">
+            <summary>
+            The quality default
+            </summary>
+        </member>
+        <member name="F:EasyCompressor.BrotliUtils.Quality_Max">
+            <summary>
+            The quality maximum
+            </summary>
+        </member>
+        <member name="F:EasyCompressor.BrotliUtils.MaxInputSize">
+            <summary>
+            The maximum input size
+            </summary>
+        </member>
+        <member name="M:EasyCompressor.BrotliUtils.GetQualityFromCompressionLevel(System.IO.Compression.CompressionLevel)">
+            <summary>
+            Gets the quality from compression level.
+            </summary>
+            <param name="compressionLevel">The compression level.</param>
+            <returns></returns>
+            <exception cref="T:System.ComponentModel.InvalidEnumArgumentException"></exception>
+        </member>
+        <member name="M:EasyCompressor.BrotliUtils.ThrowIfQualityIsNotValid(System.Int32,System.String)">
+            <summary>
+            Throws an <see cref="T:System.ArgumentOutOfRangeException"/> if <paramref name="quality"/> is not in the valid range.
+            </summary>
+            <param name="quality">The quality to validate.</param>
+            <param name="paramName">The name of the parameter with which <paramref name="quality"/> corresponds.</param>
+            <exception cref="T:System.ArgumentOutOfRangeException"></exception>
+        </member>
+        <member name="M:EasyCompressor.BrotliUtils.ThrowIfWindowIsNotValid(System.Int32,System.String)">
+            <summary>
+            Throws an <see cref="T:System.ArgumentOutOfRangeException"/> if <paramref name="window"/> is not in the valid range.
+            </summary>
+            <param name="window">The window to validate.</param>
+            <param name="paramName">The name of the parameter with which <paramref name="window"/> corresponds.</param>
+            <exception cref="T:System.ArgumentOutOfRangeException"></exception>
+        </member>
+        <member name="T:EasyCompressor.CompressorExtensions">
+            <summary>
+            ICompressor extensions
+            </summary>
+        </member>
+        <member name="M:EasyCompressor.CompressorExtensions.Compress(EasyCompressor.ICompressor,System.Byte[],System.IO.Stream)">
+            <summary>
+            Compress input byte[] and write to output Stream
+            </summary>
+            <param name="compressor">compressor</param>
+            <param name="bytes">bytes</param>
+            <param name="outputStream">outputStream</param>
+        </member>
+        <member name="M:EasyCompressor.CompressorExtensions.Decompress(EasyCompressor.ICompressor,System.Byte[],System.IO.Stream)">
+            <summary>
+            Decompress input byte[] and write to output Stream
+            </summary>
+            <param name="compressor">compressor</param>
+            <param name="compressedBytes">compressedBytes</param>
+            <param name="outputStream">outputStream</param>
+        </member>
+        <member name="M:EasyCompressor.CompressorExtensions.CompressAsync(EasyCompressor.ICompressor,System.Byte[],System.IO.Stream,System.Threading.CancellationToken)">
+            <summary>
+            Compress input byte[] and write to output Stream
+            </summary>
+            <param name="compressor">compressor</param>
+            <param name="bytes">bytes</param>
+            <param name="outputStream">outputStream</param>
+            <param name="cancellationToken">cancellationToken</param>
+            <returns>Task</returns>
+        </member>
+        <member name="M:EasyCompressor.CompressorExtensions.DecompressAsync(EasyCompressor.ICompressor,System.Byte[],System.IO.Stream,System.Threading.CancellationToken)">
+            <summary>
+            Decompress input byte[] and write to output Stream
+            </summary>
+            <param name="compressor">compressor</param>
+            <param name="compressedBytes">compressedBytes</param>
+            <param name="outputStream">outputStream</param>
+            <param name="cancellationToken">cancellationToken</param>
+            <returns>Task</returns>
+        </member>
+        <member name="M:EasyCompressor.CompressorExtensions.Compress(EasyCompressor.ICompressor,System.IO.Stream)">
+            <summary>
+            Read from input Stream then compress it's content and return byte[]
+            </summary>
+            <param name="compressor">compressor</param>
+            <param name="inputStream">inputStream</param>
+            <returns>Task</returns>
+        </member>
+        <member name="M:EasyCompressor.CompressorExtensions.Decompress(EasyCompressor.ICompressor,System.IO.Stream)">
+            <summary>
+            Read from input Stream then decompress it's content  and return byte[]
+            </summary>
+            <param name="compressor">compressor</param>
+            <param name="inputStream">inputStream</param>
+            <returns>Task</returns>
+        </member>
+        <member name="M:EasyCompressor.CompressorExtensions.CompressAsync(EasyCompressor.ICompressor,System.IO.Stream,System.Threading.CancellationToken)">
+            <summary>
+            Read from input Stream then compress it's content and return byte[]
+            </summary>
+            <param name="compressor">compressor</param>
+            <param name="inputStream">inputStream</param>
+            <param name="cancellationToken">cancellationToken</param>
+            <returns>Task</returns>
+        </member>
+        <member name="M:EasyCompressor.CompressorExtensions.DecompressAsync(EasyCompressor.ICompressor,System.IO.Stream,System.Threading.CancellationToken)">
+            <summary>
+            Read from input Stream then decompress it's content  and return byte[]
+            </summary>
+            <param name="compressor">compressor</param>
+            <param name="inputStream">inputStream</param>
+            <param name="cancellationToken">cancellationToken</param>
+            <returns>Task</returns>
+        </member>
+        <member name="T:EasyCompressor.Guard">
+            <summary>
+            Guard and Validation
+            </summary>
+        </member>
+        <member name="M:EasyCompressor.Guard.ThrowIfNull``1(``0,System.String)">
+            <summary>
+            Validates that obj is not null , otherwise throws an <see cref="T:System.ArgumentNullException"/> exception.
+            </summary>
+            <param name="value">The object to validate as non-null.</param>
+            <param name="paramName">The name of the parameter with which <paramref name="value"/> corresponds.</param>
+            <exception cref="T:System.ArgumentNullException"></exception>
+        </member>
+        <member name="M:EasyCompressor.Guard.ThrowIfNullOrEmpty``1(System.Collections.Generic.IEnumerable{``0},System.String)">
+            <summary>
+            Validates that the specified <paramref name="enumerable"/> is not null or empty, otherwise throws an exception.
+            </summary>
+            <param name="enumerable">The enumerable to validate as non-null and non-empty.</param>
+            <param name="paramName">The name of the parameter with which <paramref name="enumerable"/> corresponds.</param>
+            <exception cref="T:System.ArgumentNullException"></exception>
+            <exception cref="T:System.ArgumentException"></exception>
+        </member>
+        <member name="T:EasyCompressor.StreamExtensions">
+            <summary>
+            Stream Extensions
+            </summary>
+        </member>
+        <member name="M:EasyCompressor.StreamExtensions.GetTrimmedBuffer(System.IO.MemoryStream)">
+            <summary>
+            Gets the trimmed buffer of the specified <see cref="T:System.IO.MemoryStream"/> (regardless of the current <see cref="P:System.IO.MemoryStream.Position"/>), without moving the <see cref="P:System.IO.MemoryStream.Position"/>.
+            </summary>
+            <param name="stream">The stream.</param>
+            <remarks>
+            Use it only when using a local instance of the <see cref="T:System.IO.MemoryStream"/> and you are the owner/creator of it, NOT when it came from somewhere else.
+            Otherwise it can cause problems
+            </remarks>
+            <returns></returns>
+        </member>
+        <member name="M:EasyCompressor.StreamExtensions.ReadAllBytes(System.IO.Stream)">
+            <summary>
+            Reads all [Remained] bytes from current <see cref="P:System.IO.Stream.Position"/> to End.
+            </summary>
+            <param name="stream">The stream.</param>
+            <returns></returns>
+        </member>
+        <member name="M:EasyCompressor.StreamExtensions.ReadAllBytesAsync(System.IO.Stream,System.Threading.CancellationToken)">
+            <summary>
+            Reads all bytes asynchronously.
+            </summary>
+            <param name="stream">The stream.</param>
+            <param name="cancellationToken">The cancellation token.</param>
+            <returns></returns>
+        </member>
+        <member name="M:EasyCompressor.StreamExtensions.WriteAllBytes(System.IO.Stream,System.ReadOnlySpan{System.Byte})">
+            <summary>
+            Writes all bytes.
+            </summary>
+            <param name="stream">The stream.</param>
+            <param name="bytes">The bytes.</param>
+        </member>
+        <member name="M:EasyCompressor.StreamExtensions.WriteAllBytesAsync(System.IO.Stream,System.ReadOnlyMemory{System.Byte},System.Threading.CancellationToken)">
+            <summary>
+            Writes all bytes asynchronously.
+            </summary>
+            <param name="stream">The stream.</param>
+            <param name="bytes">The bytes.</param>
+            <param name="cancellationToken">The cancellation token.</param>
+        </member>
+        <member name="T:EasyCompressor.ZstdUtils">
+            <summary>
+            ZstdUtils
+            </summary>
+        </member>
+        <member name="F:EasyCompressor.ZstdUtils.Level_Min">
+            <summary>
+            The minimum compression level (<see cref="F:EasyCompressor.ZstdCompressionLevel.NoCompression"/>)
+            </summary>
+        </member>
+        <member name="F:EasyCompressor.ZstdUtils.Level_Default">
+            <summary>
+            The default compression level (<see cref="F:EasyCompressor.ZstdCompressionLevel.Fast"/>)
+            </summary>
+        </member>
+        <member name="F:EasyCompressor.ZstdUtils.Level_Max">
+            <summary>
+            The maximum compression level (<see cref="F:EasyCompressor.ZstdCompressionLevel.SmallestSize"/>)
+            </summary>
+        </member>
+        <member name="M:EasyCompressor.ZstdUtils.ThrowIfLevelIsNotValid(System.Int32,System.String)">
+            <summary>
+            Throws an <see cref="T:System.ArgumentOutOfRangeException"/> if <paramref name="compressionLevel"/> is not in the valid range.
+            </summary>
+            <param name="compressionLevel">The compression level to validate.</param>
+            <param name="paramName">The name of the parameter with which <paramref name="compressionLevel"/> corresponds.</param>
+            <exception cref="T:System.ArgumentOutOfRangeException"></exception>
+        </member>
+        <member name="T:EasyCompressor.ZstdCompressionLevel">
+            <summary>
+            ZStandard Compression Level
+            </summary>
+        </member>
+        <member name="F:EasyCompressor.ZstdCompressionLevel.NoCompression">
+            <summary>
+            No compression should be performed on the file. (Equals to <c>-131072</c>)
+            </summary>
+        </member>
+        <member name="F:EasyCompressor.ZstdCompressionLevel.Fastest">
+            <summary>
+            The compression operation should complete as quickly as possible, even if the resulting file is not optimally compressed. (Equals to <c>-22</c>)
+            </summary>
+        </member>
+        <member name="F:EasyCompressor.ZstdCompressionLevel.Fast">
+            <summary>
+            The compression operation should optimally balance compression speed and output size. (Our Default - Equals to <c>-1</c>)
+            </summary>
+        </member>
+        <member name="F:EasyCompressor.ZstdCompressionLevel.Optimal">
+            <summary>
+            The compression operation should optimally balance compression speed and output size. (ZStandard Default - Equals to <c>3</c> or <c>0</c>)
+            </summary>
+        </member>
+        <member name="F:EasyCompressor.ZstdCompressionLevel.SmallestSize">
+            <summary>
+            The compression operation should create output as small as possible, even if the operation takes a longer time to complete. (Equals to <c>22</c>)
+            </summary>
+        </member>
+        <member name="T:Microsoft.Extensions.DependencyInjection.ConfigurationExtensions">
+            <summary>
+            Configuration extensions
+            </summary>
+        </member>
+        <member name="M:Microsoft.Extensions.DependencyInjection.ConfigurationExtensions.AddGZipCompressor(Microsoft.Extensions.DependencyInjection.IServiceCollection)">
+            <summary>
+            Add GZipCompressor to services.
+            </summary>
+            <param name="services">services</param>
+            <returns>IServiceCollection</returns>
+        </member>
+        <member name="M:Microsoft.Extensions.DependencyInjection.ConfigurationExtensions.AddGZipCompressor(Microsoft.Extensions.DependencyInjection.IServiceCollection,System.IO.Compression.CompressionLevel)">
+            <summary>
+            Add GZipCompressor to services.
+            </summary>
+            <param name="services">services</param>
+            <param name="level">Compression level (Defaults to <see cref="F:System.IO.Compression.CompressionLevel.Fastest"/>)</param>
+            <returns>IServiceCollection</returns>
+        </member>
+        <member name="M:Microsoft.Extensions.DependencyInjection.ConfigurationExtensions.AddGZipCompressor(Microsoft.Extensions.DependencyInjection.IServiceCollection,System.String)">
+            <summary>
+            Add GZipCompressor to services with specified <paramref name="name"/>.
+            </summary>
+            <param name="services">services</param>
+            <param name="name">Name</param>
+            <returns>IServiceCollection</returns>
+        </member>
+        <member name="M:Microsoft.Extensions.DependencyInjection.ConfigurationExtensions.AddGZipCompressor(Microsoft.Extensions.DependencyInjection.IServiceCollection,System.String,System.IO.Compression.CompressionLevel)">
+            <summary>
+            Add GZipCompressor to services with specified <paramref name="name"/>.
+            </summary>
+            <param name="services">services</param>
+            <param name="name">Name</param>
+            <param name="level">Compression level (Defaults to <see cref="F:System.IO.Compression.CompressionLevel.Fastest"/>)</param>
+            <returns>IServiceCollection</returns>
+        </member>
+        <member name="M:Microsoft.Extensions.DependencyInjection.ConfigurationExtensions.AddDeflateCompressor(Microsoft.Extensions.DependencyInjection.IServiceCollection)">
+            <summary>
+            Add DeflateCompressor to services.
+            </summary>
+            <param name="services">services</param>
+            <returns>IServiceCollection</returns>
+        </member>
+        <member name="M:Microsoft.Extensions.DependencyInjection.ConfigurationExtensions.AddDeflateCompressor(Microsoft.Extensions.DependencyInjection.IServiceCollection,System.IO.Compression.CompressionLevel)">
+            <summary>
+            Add DeflateCompressor to services.
+            </summary>
+            <param name="services">services</param>
+            <param name="level">Compression level (Defaults to <see cref="F:System.IO.Compression.CompressionLevel.Fastest"/>)</param>
+            <returns>IServiceCollection</returns>
+        </member>
+        <member name="M:Microsoft.Extensions.DependencyInjection.ConfigurationExtensions.AddDeflateCompressor(Microsoft.Extensions.DependencyInjection.IServiceCollection,System.String)">
+            <summary>
+            Add DeflateCompressor to services with specified <paramref name="name"/>.
+            </summary>
+            <param name="services">services</param>
+            <param name="name">Name</param>
+            <returns>IServiceCollection</returns>
+        </member>
+        <member name="M:Microsoft.Extensions.DependencyInjection.ConfigurationExtensions.AddDeflateCompressor(Microsoft.Extensions.DependencyInjection.IServiceCollection,System.String,System.IO.Compression.CompressionLevel)">
+            <summary>
+            Add DeflateCompressor to services with specified <paramref name="name"/>.
+            </summary>
+            <param name="services">services</param>
+            <param name="name">Name</param>
+            <param name="level">Compression level (Defaults to <see cref="F:System.IO.Compression.CompressionLevel.Fastest"/>)</param>
+            <returns>IServiceCollection</returns>
+        </member>
+        <member name="M:Microsoft.Extensions.DependencyInjection.ConfigurationExtensions.AddBrotliCompressor(Microsoft.Extensions.DependencyInjection.IServiceCollection)">
+            <summary>
+            Add BrotliCompressor to services.
+            </summary>
+            <param name="services">services</param>
+            <returns>IServiceCollection</returns>
+        </member>
+        <member name="M:Microsoft.Extensions.DependencyInjection.ConfigurationExtensions.AddBrotliCompressor(Microsoft.Extensions.DependencyInjection.IServiceCollection,System.IO.Compression.CompressionLevel)">
+            <summary>
+            Add BrotliCompressor to services.
+            </summary>
+            <param name="services">services</param>
+            <param name="level">Compression level (Defaults to <see cref="F:System.IO.Compression.CompressionLevel.Fastest"/>)</param>
+            <returns>IServiceCollection</returns>
+        </member>
+        <member name="M:Microsoft.Extensions.DependencyInjection.ConfigurationExtensions.AddBrotliCompressor(Microsoft.Extensions.DependencyInjection.IServiceCollection,System.String)">
+            <summary>
+            Add BrotliCompressor to services.
+            </summary>
+            <param name="services">services</param>
+            <param name="name">Name</param>
+            <returns>IServiceCollection</returns>
+        </member>
+        <member name="M:Microsoft.Extensions.DependencyInjection.ConfigurationExtensions.AddBrotliCompressor(Microsoft.Extensions.DependencyInjection.IServiceCollection,System.String,System.IO.Compression.CompressionLevel)">
+            <summary>
+            Add BrotliCompressor to services with specified <paramref name="name"/>.
+            </summary>
+            <param name="services">services</param>
+            <param name="name">Name</param>
+            <param name="level">Compression level (Defaults to <see cref="F:System.IO.Compression.CompressionLevel.Fastest"/>)</param>
+            <returns>IServiceCollection</returns>
+        </member>
+        <member name="M:Microsoft.Extensions.DependencyInjection.ConfigurationExtensions.AddZLibCompressor(Microsoft.Extensions.DependencyInjection.IServiceCollection)">
+            <summary>
+            Add ZLibCompressor to services.
+            </summary>
+            <param name="services">services</param>
+            <returns>IServiceCollection</returns>
+        </member>
+        <member name="M:Microsoft.Extensions.DependencyInjection.ConfigurationExtensions.AddZLibCompressor(Microsoft.Extensions.DependencyInjection.IServiceCollection,System.IO.Compression.CompressionLevel)">
+            <summary>
+            Add ZLibCompressor to services.
+            </summary>
+            <param name="services">services</param>
+            <param name="level">Compression level (Defaults to <see cref="F:System.IO.Compression.CompressionLevel.Fastest"/>)</param>
+            <returns>IServiceCollection</returns>
+        </member>
+        <member name="M:Microsoft.Extensions.DependencyInjection.ConfigurationExtensions.AddZLibCompressor(Microsoft.Extensions.DependencyInjection.IServiceCollection,System.String)">
+            <summary>
+            Add ZLibCompressor to services with specified <paramref name="name"/>.
+            </summary>
+            <param name="services">services</param>
+            <param name="name">Name</param>
+            <returns>IServiceCollection</returns>
+        </member>
+        <member name="M:Microsoft.Extensions.DependencyInjection.ConfigurationExtensions.AddZLibCompressor(Microsoft.Extensions.DependencyInjection.IServiceCollection,System.String,System.IO.Compression.CompressionLevel)">
+            <summary>
+            Add ZLibCompressor to services with specified <paramref name="name"/>.
+            </summary>
+            <param name="services">services</param>
+            <param name="name">Name</param>
+            <param name="level">Compression level (Defaults to <see cref="F:System.IO.Compression.CompressionLevel.Fastest"/>)</param>
+            <returns>IServiceCollection</returns>
+        </member>
+    </members>
+</doc>
