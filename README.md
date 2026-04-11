@@ -1,4 +1,4 @@
-# filechanger_net9
+# SWTOR File Changer (.NET 9)
 
 Original by SWTOR fan: https://www.undertow.club/threads/3047/
 
