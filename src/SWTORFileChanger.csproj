@@ -16,6 +16,23 @@
     <AssemblyVersion>1.0.0.0</AssemblyVersion>
     <BaseOutputPath>..\bin\</BaseOutputPath>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+    <NoWarn>1701;1702;IDE1006</NoWarn>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+    <NoWarn>1701;1702;IDE1006</NoWarn>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Remove="My\**" />
+    <EmbeddedResource Remove="My\**" />
+    <None Remove="My\**" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Remove="MainWindow.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Remove="MainWindow.resx" />
+  </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Crc32.NET" Version="1.2.0" />
     <PackageReference Include="EasyCompressor" Version="2.1.0" />

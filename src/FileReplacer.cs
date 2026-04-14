@@ -18,6 +18,11 @@ namespace SWTOR_File_Changer
 {
     public class FileReplacer
     {
+		private readonly ILogger logger;
+		public FileReplacer(ILogger arg_logger = null)
+		{
+			logger = arg_logger ?? new ConsoleLogger();
+		}
 		public static uint ComputeCrc32(byte[] data)
 		{
 			return Force.Crc32.Crc32Algorithm.Compute(data);
@@ -57,14 +62,13 @@ namespace SWTOR_File_Changer
 					*/
 					BinaryReader binaryReader = new(input);
 
-					// TODO log these errors differently. All this file reading code should be moved anyway
 					if (binaryReader.ReadByte() != 77 | binaryReader.ReadByte() != 89 | binaryReader.ReadByte() != 80 | binaryReader.ReadByte() != 0)
 					{
-						MessageBox.Show(files[index] + " is not a valid .tor archive!");
+						logger.Log(files[index] + " is not a valid .tor archive!");
 					}
 					if (binaryReader.ReadUInt32() != 6U)
 					{
-						MessageBox.Show("Only version 6 is supported; " + files[index] + " cannot be read!");
+						logger.Log("Only version 6 is supported; " + files[index] + " cannot be read!");
 					}
 					int num4 = (int)binaryReader.ReadUInt32();
 					ulong offset = binaryReader.ReadUInt64();
