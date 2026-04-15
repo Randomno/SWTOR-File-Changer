@@ -14,7 +14,7 @@ using System.IO.Compression;
 using System.Diagnostics;
 using System.Security.Cryptography;
 
-namespace SWTOR_File_Changer
+namespace FileChanger
 {
     public class FileReplacer
     {

@@ -1,4 +1,4 @@
-﻿namespace SWTOR_File_Changer
+﻿namespace FileChanger
 {
 	partial class GUI
 	{

@@ -11,14 +11,14 @@ using System.IO;
 using System.Diagnostics;
 using static System.Windows.Forms.VisualStyles.VisualStyleElement;
 using Microsoft.VisualBasic;
-using nsHashCreator;
-using nsHashDictionary;
-using nsHasherFunctions;
+using HashCreatorNS;
+using HashDictionaryNS;
+using HasherFunctionsNS;
 using System.Collections;
 using ZstdSharp;
 using System.IO.Compression;
 
-namespace SWTOR_File_Changer
+namespace FileChanger
 {
 	public partial class GUI : Form
 	{

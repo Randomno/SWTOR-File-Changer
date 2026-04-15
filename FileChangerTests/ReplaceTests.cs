@@ -1,4 +1,4 @@
-﻿using SWTOR_File_Changer;
+﻿using FileChanger;
 using System.Collections;
 using System.Security.Cryptography;
 

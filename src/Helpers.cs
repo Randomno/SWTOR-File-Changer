@@ -1,6 +1,6 @@
-﻿using nsHashCreator;
-using nsHashDictionary;
-using nsHasherFunctions;
+﻿using HashCreatorNS;
+using HashDictionaryNS;
+using HasherFunctionsNS;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -8,7 +8,7 @@ using System.Text;
 using System.Threading.Tasks;
 using ZstdSharp;
 
-namespace SWTOR_File_Changer
+namespace FileChanger
 {
     public static class Helpers
     {

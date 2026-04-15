@@ -5,7 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace SWTOR_File_Changer
+namespace FileChanger
 {
 	public interface ILogger
 	{
