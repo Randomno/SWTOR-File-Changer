@@ -8,3 +8,9 @@
 /src/obj
 /FileChangerTests/bin/Debug/net9.0-windows
 /FileChangerTests/obj
+/HashCreator/bin/Debug
+/HashCreator/obj
+/HashDictionary/bin/Debug
+/HashDictionary/obj
+/HasherFunctions/bin/Debug/net9.0
+/HasherFunctions/obj
