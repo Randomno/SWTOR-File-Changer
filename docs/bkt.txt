@@ -1,0 +1,67 @@
+// Bucket files, containing embedded bucket prototype nodes
+// e.g. /resources/systemgenerated/buckets/0.bkt
+
+uint32 magic, always PBUK (0x4B554250)
+uint16 major version, always 2
+uint16 minor version, 4 or 5
+FOR EACH (DBLB section) { -> continue until end of file (there are always exactly two DBLB sections; first one is empty)
+  uint32 section length (without this length field)
+  uint32 always DBLB (0x424C4244)
+  uint32 version, 1 or 2
+  FOR EACH (bucket node) { -> read as long as entryLength > 0 and we have not yet reached end of DBLB section
+    --- length until name: 0x2e bytes (version 1) or 0x32 bytes (version 2) ---
+    uint32 entryLength (including these four bytes)
+    if (DBLB_VERSION == 1) {
+      uint16 bitset (usually 15 = node contents are compressed, but can also by 14 = node contents are not compressed) - Prior to 7.6, uncompressed node contents always meant that the node contents are empty. After 7.6 (when zstd compression was used), small nodes were frequently uncompressed.
+      uint16 offset to compressed data
+      uint64 id (always 0xE000... = 1614...)
+    } else if (DBLB_VERSION == 2) {
+      uint32 always zero
+      uint64 id (always 0xE000... = 1614...)
+      uint16 type, see `DOM_TYPES` (usually 15 = node contents are compressed, but can also by 14 = node contents are not compressed) - Prior to 7.6, uncompressed node contents always meant that the node contents are empty. After 7.6 (when zstd compression was used), small nodes were frequently uncompressed.
+      uint16 offset to compressed data. In case of type 14 prior to 7.6, this will be directly after entryLength (= empty)
+    }
+    uint16 offset to name/FQN (zero-delimited string)
+    uint16 offset to description (zero-delimited string)
+    if (DBLB_VERSION === 1) {
+      uint32 Appears to be the number of lines after deserialization, which is number of fields + number of child ClassView fields + number of LookupList/List entries
+             Might also be number of primitives, in which case number of LookupList keys also count toward it.
+    }
+    uint64 base class id (always 0x4000... = 4611...  or  0x8000... = 9223...)
+    if (DBLB_VERSION === 2) {
+      uint32 zero
+    }
+    uint16 number of glommed classes - usually 0
+    uint16 offset to glommed classes after decompressing it in place (= compressed offset + number of leading zero bytes)
+    uint32 length of the node contents inside the uncompressed data (= without leading zero bytes, without glommed classes but with "number of root fields", "number of stored root fields" and "root fields")
+    uint16 offset to beginning of data after decompressing it in place (= compressed offset + number of leading zero bytes + 8 * number of glommed classes)
+    uint16 always 4 or 5, identical to PBUK minor version
+    uint8 stream style, always 1 (in early beta, even before our beta1 copy, it appeared to be set to 0-10 according to NodeViewer)
+    uint8 can be 2 (static) or 3 (dynamic), identical to node type in /resources/systemgenerated/prototypes.info
+    char[] name as zero-delimited string
+    char[] description as zero-delimited string - usually empty string, but can be set e.g. to "16140901517411256500" (see qst.test.location.dromund_kaas.bronze.jungle_raid in Patch 2.4.1)
+    IF (type == 15) {
+      char[] compressed data, starting with 78 9C (DEFLATE, before 7.6) or starting with 28 B5 2F FD 60 (zstd, since 7.6)
+      -> After decompression:
+          uint8[] zero-padding to align with 8-byte block
+          <-- "offset to glommed classes after decompressing it in place" points here
+          FOR EACH (glommed class) {
+            uint64 id of glommed class (always 0x4000... = 4611...  or  0x8000... = 9223...)
+          }
+          <-- "offset to beginning of data after decompressing it in place" points here
+          IF ("length of the node contents inside the uncompressed data" > 0) {
+            varint number of root fields
+            varint number of stored root fields. Will be smaller than "number of root fields" if any field is set to the default value because in that case the field will be missing
+            FOR EACH (stored root field) {
+              varint field id (relative to previous field id)
+              DOM_TYPE type
+              char[] value
+            }
+          }
+    } else if (type == 14) {
+      char[] uncompressed data, see above
+    }
+    uint8[] zero-padding until next 8-byte block, measured from beginning of DBLB section
+  }
+  uint32 always 0, end of section marker
+}

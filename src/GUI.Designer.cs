@@ -177,6 +177,7 @@
 			radioEnvPTS.TabIndex = 12;
 			radioEnvPTS.Text = "PTS";
 			radioEnvPTS.UseVisualStyleBackColor = true;
+			radioEnvPTS.CheckedChanged += radioEnvPTS_CheckedChanged;
 			// 
 			// radioEnvLive
 			// 
@@ -190,6 +191,7 @@
 			radioEnvLive.TabStop = true;
 			radioEnvLive.Text = "Live";
 			radioEnvLive.UseVisualStyleBackColor = true;
+			radioEnvLive.CheckedChanged += radioEnvLive_CheckedChanged;
 			// 
 			// GUI
 			// 

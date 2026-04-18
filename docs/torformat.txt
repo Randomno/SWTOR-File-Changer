@@ -1,0 +1,30 @@
+//EA Mythic file format, used for storing assets in SWTOR (.tor)
+//also used in Ultima Online (.uop) and Warhammer Online (.myp)
+
+struct HEADER {
+  uint32 magic //always 0x0050594D = "MYP\0"
+  uint32 version //either 5 (Ultima, Warhammer, SWTOR 32-bit client) or 6 (SWTOR 64-bit client)
+  uint32 byteOrder //always 0xFD23EC43 = little-endian
+  uint64 ftOffset
+  uint32 ftCapacity //always 1000
+  uint32 totalNumberOfFiles //including metadata.bin, ft.sig and (sometimes) groupmanifest.bin
+  uint32 unknownCount // related to file size and between 1 and 11
+  uint32 unknownCountRepetition
+  //read first FILE_TABLE at ftOffset
+}
+
+struct FILE_TABLE {
+  uint32 ftCapacity;
+  uint64 ftNewOffset; //offset of next file table, or zero if this was the last file table
+  for each (ftCapacity) {
+    uint64 offset (t), or zero if empty
+    uint32 metadata length (ml) //metadata is stored at offset, right before file. file starts at offset + metadata length
+    uint32 compressed length (cl)
+    uint32 uncompressed length (ul)
+    uint32 primary hash (ph) //two-part file name hash - according to Warhammer's mft.myp, ph is before sh
+    uint32 secondary hash (sh)
+    uint32 crc -> metadata checksum (mc), apparently Adler32 hash of metadata (02 00 20 00 XX ... XX)
+    uint16 isCompressed - compression type (ct), 0 = uncompressed, 1 = compressed (DEFLATE in v5, zstd in v6)
+  }
+  //read next FILE_TABLE starting at ftNewOffset
+}

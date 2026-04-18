@@ -1,27 +1,21 @@
 ﻿using Force.Crc32;
-using Microsoft.VisualBasic;
 using Microsoft.VisualBasic.CompilerServices;
 using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Windows.Forms;
 using ZstdSharp;
 using System.IO.Compression;
-using System.Diagnostics;
-using System.Security.Cryptography;
+using System.ComponentModel.DataAnnotations;
 
 namespace FileChanger
 {
     public class FileReplacer
     {
 		private readonly ILogger logger;
-		public FileReplacer(ILogger arg_logger = null)
+		public FileReplacer(ILogger logger = null)
 		{
-			logger = arg_logger ?? new ConsoleLogger();
+			this.logger = logger ?? new ConsoleLogger();
 		}
 		public static uint ComputeCrc32(byte[] data)
 		{
@@ -45,30 +39,52 @@ namespace FileChanger
 			public int fileTableFileIndex;
 		}
 
-
-		public byte[] ExtractFile(ulong hash, List<string> files, bool isPTS, bool isLive)
+		public void RestoreBackup(string[] backups, string installFolder, IProgress<int> progress = null)
 		{
-			for (int index = 0; index < files.Count; index++)
+			int i = 0;
+			if (backups.Length == 0)
 			{
-				string str = files[index].Substring(checked(files[index].LastIndexOf("\\") + 1));
-				if (!(isPTS & !str.StartsWith("swtor_test_")) && !(isLive & str.StartsWith("swtor_test_")))
+				logger.Log("Nothing to restore!");
+				return;
+			}
+			foreach (var path in backups)
+			{
+				progress?.Report(i++);
+				string fileName = Path.GetFileName(path);
+				string targetPath = fileName.Equals("main_gfx_1.tor", StringComparison.OrdinalIgnoreCase)
+					? installFolder + "\\swtor\\retailclient\\" + fileName
+					: installFolder + "\\Assets\\" + fileName;
+				File.Copy(path, targetPath, true);
+				File.Delete(path);
+				logger.Log("Replaced " + targetPath + " with " + fileName);
+			}
+			logger.Log("Finished restoring backup!");
+		}
+
+
+		public byte[] ExtractFile(string fileName, List<string> torFiles, Env env, IProgress<int> progress = null)
+		{
+			ulong hash = Helpers.FileNameToHash(fileName.ToLower());
+			int i = 0;
+			foreach (string path in torFiles)
+			{
+				progress?.Report(i++);
+				string str = Path.GetFileName(path);
+				// TODO main_gfx_1.tor in PTS has normal name
+				bool isPTSFile = str.StartsWith("swtor_test_");
+				// I don't know why this is even checked
+				if ((env == Env.Live && !isPTSFile) || (env == Env.PTS && isPTSFile))
 				{
-					FileStream input = new(files[index], FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
-					/*
-					var sha1 = SHA1.Create();
-					string sha1OfArchive = Convert.ToHexString(sha1.ComputeHash(input));
-					input.Position = 0;
-					Debug.WriteLine(sha1OfArchive);
-					*/
+					FileStream input = new(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
 					BinaryReader binaryReader = new(input);
 
 					if (binaryReader.ReadByte() != 77 | binaryReader.ReadByte() != 89 | binaryReader.ReadByte() != 80 | binaryReader.ReadByte() != 0)
 					{
-						logger.Log(files[index] + " is not a valid .tor archive!");
+						logger.Log(path + " is not a valid .tor archive!");
 					}
 					if (binaryReader.ReadUInt32() != 6U)
 					{
-						logger.Log("Only version 6 is supported; " + files[index] + " cannot be read!");
+						logger.Log("Only version 6 is supported; " + path + " cannot be read!");
 					}
 					int num4 = (int)binaryReader.ReadUInt32();
 					ulong offset = binaryReader.ReadUInt64();
@@ -115,6 +131,203 @@ namespace FileChanger
 			return null;  // File not found
 		}
 
+		// TODO standardise extract node and file to return the same type. Not sure which
+		public void ExtractNode(string nodeKey, List<string> torFileList, Hashtable bucketList)
+		{
+			bool found = false;
+			foreach (var archive in torFileList)
+			{
+				if (found) break;
+
+				using var fs = new FileStream(archive, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+				using var br = new BinaryReader(fs);
+
+				// 2) Validate .tor v6 header
+				if (br.ReadByte() != (byte)'M' || br.ReadByte() != (byte)'Y' ||
+					br.ReadByte() != (byte)'P' || br.ReadByte() != 0 ||
+					br.ReadUInt32() != 6U)
+				{
+					continue;
+				}
+
+				// 3) Build file-table lists
+				var tableOffsets = new List<ulong> { 16UL };
+				var tableCaps = new List<uint> { br.ReadUInt32() };
+				ulong nextPtr = br.ReadUInt64();
+				while (nextPtr != 0 && nextPtr < (ulong)fs.Length)
+				{
+					fs.Seek((long)nextPtr, SeekOrigin.Begin);
+					uint capN = br.ReadUInt32();
+					ulong follow = br.ReadUInt64();
+					tableOffsets.Add(nextPtr);
+					tableCaps.Add(capN);
+					nextPtr = follow;
+				}
+
+				// 4) Walk every bucket entry
+				for (int t = 0; t < tableOffsets.Count && !found; t++)
+				{
+					ulong tblOff = tableOffsets[t];
+					uint tblCap = tableCaps[t];
+
+					for (uint idx = 0; idx < tblCap && !found; idx++)
+					{
+						long metaPos = (long)tblOff + 12 + idx * 34;
+						if (metaPos + 34 > fs.Length) break;
+
+						fs.Seek(metaPos, SeekOrigin.Begin);
+						ulong dataOff = br.ReadUInt64();
+						uint metaSize = br.ReadUInt32();
+						uint compSize = br.ReadUInt32();
+						br.ReadUInt32();            // uncomprSize
+						ulong fileId = br.ReadUInt64();
+						br.ReadUInt32();            // CRC32
+						br.ReadUInt16();            // compType
+
+						if (!bucketList.ContainsKey(fileId))
+							continue;
+
+
+						// 5) Decompress the .bkt payload
+						long bucketPos = (long)dataOff + metaSize;
+						if (bucketPos + compSize > fs.Length)
+						{
+							continue;
+						}
+						fs.Seek(bucketPos, SeekOrigin.Begin);
+						byte[] compBkt = br.ReadBytes((int)compSize);
+						byte[] bucketData;
+						try
+						{
+							bucketData = new Decompressor().Unwrap(compBkt).ToArray();
+						}
+						catch (Exception ex)
+						{
+							continue;
+						}
+
+						// 6) Parse PBUK + first (empty) DBLB
+						using var ms = new MemoryStream(bucketData);
+						using var dr = new BinaryReader(ms);
+
+						ms.Position = 8;
+						uint firstLen = dr.ReadUInt32();
+						ms.Position += firstLen;  // skip exactly skipLen bytes :contentReference[oaicite:0]{index=0}
+
+						// 7) Scan remaining DBLB sections
+						while (!found && ms.Position + 4 <= bucketData.Length)
+						{
+							long sectionLenPos = ms.Position;
+							uint sectionLen = dr.ReadUInt32();
+							long sectionStart = ms.Position;
+							long sectionEnd = Math.Min(sectionStart + sectionLen, bucketData.Length);
+
+							dr.ReadUInt32();          // magic "DBLB"
+							uint version = dr.ReadUInt32();
+
+							// 8) Walk every entry in this section
+							long entryPos = sectionStart + 8;  // skip magic+ver
+							while (!found && entryPos + 4 <= sectionEnd)
+							{
+								ms.Position = entryPos;
+								uint entryLen = dr.ReadUInt32();
+								if (entryLen == 0) break;
+
+								long entryStart = entryPos;
+								ms.Position = entryStart + 4;
+
+								// Read version‐dependent header to get dataOffset
+								ushort dataOffset;
+								if (version == 1)
+								{
+									dr.ReadUInt16();       // bitset
+									dataOffset = dr.ReadUInt16();
+									dr.ReadUInt64();       // id
+								}
+								else
+								{
+									dr.ReadUInt32();       // zero
+									dr.ReadUInt64();       // id
+									dr.ReadUInt16();       // bitset
+									dataOffset = dr.ReadUInt16();
+								}
+
+								ushort nameOff = dr.ReadUInt16();
+								dr.ReadUInt16();      // descOff
+
+								// 9) Read the inlineKey
+								string inlineKey = Helpers.ReadStringAt(
+									bucketData,
+									(int)(entryStart + nameOff)
+								);
+
+								// 10) If it’s our target, extract it
+								if (inlineKey.Equals(nodeKey, StringComparison.Ordinal))
+								{
+
+									// Pull out the compressed node blob
+									int blobPos = (int)(entryStart + dataOffset);
+									int blobLen = (int)(entryLen - dataOffset);
+									byte[] blob = bucketData.AsSpan(blobPos, blobLen).ToArray();
+
+									// Decompress DEFLATE vs ZSTD
+									byte[] nodeData = null;
+									bool ok = false;
+									if (blobLen >= 2 && blob[0] == 0x78 && blob[1] == 0x9C)
+									{
+										using var def = new DeflateStream(
+											new MemoryStream(blob),
+											CompressionMode.Decompress
+										);
+										using var outMs = new MemoryStream();
+										def.CopyTo(outMs);
+										nodeData = outMs.ToArray();
+										ok = true;
+									}
+									if (!ok)
+									{
+										nodeData = new Decompressor()
+												   .Unwrap(blob)
+												   .ToArray();
+										ok = true;
+									}
+
+									if (ok && nodeData != null)
+									{
+										Directory.CreateDirectory("extracted");
+										string safe = inlineKey
+											.Replace("/", "_")
+											.Replace("\\", "_");
+										string outPath = Path.Combine(
+											"extracted",
+											safe + ".node"
+										);
+										File.WriteAllBytes(outPath, nodeData);
+									}
+
+									found = true;
+									break;  // stop entry loop
+								}
+
+								// advance to next entry (pad to 8 bytes) :contentReference[oaicite:1]{index=1}
+								long rel = entryStart - sectionStart;
+								long padded = rel + entryLen + 7 & ~7L;
+								entryPos = sectionStart + padded;
+							}
+
+							// move to the next section
+							ms.Position = sectionStart + sectionLen;
+						}
+					}
+				}
+			}
+			// 11) Report result
+			if (found)
+				logger.Log($"Extracted node \"{nodeKey}\".");
+			else
+				logger.Log($"Could not find node \"{nodeKey}\".");
+		}
+
 		// TODO don't pass so many args in. origNamesList seems unnecessary. The last 2 args are only relevant to node changing.
 		// TODO make this not necessarily write to file (for testing purposes), but not sure how to do it efficiently
 		public void LoadArchiveReplaceFiles(string torFilePath, bool createBackup, bool editNode, Hashtable changeList, Hashtable origNamesList, Hashtable nodeChangeList = null, Hashtable bucketList = null, string replaceDir = "files")
@@ -127,11 +340,13 @@ namespace FileChanger
 			BinaryReader brReader = new(input);
 			if (brReader.ReadByte() != 77 | brReader.ReadByte() != 89 | brReader.ReadByte() != 80 | brReader.ReadByte() != 0)
 			{
-				throw new InvalidDataException(torFilePath + " is not a valid .tor archive!");
+				logger.Log(torFilePath + " is not a valid .tor archive!");
+				return;
 			}
 			if (brReader.ReadUInt32() != 6U)
 			{
-				throw new InvalidDataException("Only version 6 is supported; " + torFilePath + " cannot be read!");
+				logger.Log("Only version 6 is supported; " + torFilePath + " cannot be read!");
+				return;
 			}
 			int num4 = (int)brReader.ReadUInt32();
 			ulong offset = brReader.ReadUInt64();
@@ -431,7 +646,7 @@ namespace FileChanger
 					List<FileEntry> fileEntryList = (List<FileEntry>)hashtable[key4];
 					if (!File.Exists(replacePath))
 					{
-						throw new InvalidDataException("File " + changeList[key4] + " could not be found, needed in " + origNamesList[key4] + ".");
+						logger.Log("File " + changeList[key4] + " could not be found, needed in " + origNamesList[key4] + ".");
 					}
 					else
 					{
@@ -575,7 +790,6 @@ namespace FileChanger
 						output.Dispose();
 					}
 				}
-			label_60:;
 			}
 			input.Close();
 			input.Dispose();
