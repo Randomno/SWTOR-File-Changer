@@ -1,7 +1,4 @@
-﻿using HashCreatorNS;
-using HashDictionaryNS;
-using HasherFunctionsNS;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -14,20 +11,8 @@ namespace FileChanger
     public static class Helpers
     {
 
-		static HashDictionary hashDict = new();
-		static HashCreator hashCreated = new(hashDict, Hasher.HasherType.TOR);
-
-
-		public static ulong FileNameToHash(string fileName)
-		{
-			uint ph;
-			uint sh;
-			hashCreated.hashFilename(fileName.ToLower(), out ph, out sh);
-			return (ulong)ph << 32 | sh;
-		}
-
 		// https://github.com/lgastako/jenkins/blob/master/lookup3.c (hashlittle2)
-		public static ulong FileNameToHash2(string f)
+		public static ulong FileNameToHash(string f)
 		{
 			uint a, b, c;
 			int length = f.Length;

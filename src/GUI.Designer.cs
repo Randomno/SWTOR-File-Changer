@@ -42,6 +42,7 @@
 			chkBackup = new System.Windows.Forms.CheckBox();
 			radioEnvPTS = new System.Windows.Forms.RadioButton();
 			radioEnvLive = new System.Windows.Forms.RadioButton();
+			btnSettings = new System.Windows.Forms.Button();
 			SuspendLayout();
 			// 
 			// btnChangeFiles
@@ -58,7 +59,7 @@
 			// label1
 			// 
 			label1.AutoSize = true;
-			label1.Location = new System.Drawing.Point(12, 19);
+			label1.Location = new System.Drawing.Point(12, 17);
 			label1.Name = "label1";
 			label1.Size = new System.Drawing.Size(144, 15);
 			label1.TabIndex = 1;
@@ -193,11 +194,23 @@
 			radioEnvLive.UseVisualStyleBackColor = true;
 			radioEnvLive.CheckedChanged += radioEnvLive_CheckedChanged;
 			// 
+			// btnSettings
+			// 
+			btnSettings.Anchor = System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right;
+			btnSettings.Location = new System.Drawing.Point(643, 40);
+			btnSettings.Name = "btnSettings";
+			btnSettings.Size = new System.Drawing.Size(100, 29);
+			btnSettings.TabIndex = 14;
+			btnSettings.Text = "Open settings";
+			btnSettings.UseVisualStyleBackColor = true;
+			btnSettings.Click += btnSettings_Click;
+			// 
 			// GUI
 			// 
 			AutoScaleDimensions = new System.Drawing.SizeF(7F, 15F);
 			AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
 			ClientSize = new System.Drawing.Size(858, 578);
+			Controls.Add(btnSettings);
 			Controls.Add(radioEnvLive);
 			Controls.Add(radioEnvPTS);
 			Controls.Add(chkBackup);
@@ -233,5 +246,6 @@
 		private System.Windows.Forms.CheckBox chkBackup;
 		private System.Windows.Forms.RadioButton radioEnvPTS;
 		private System.Windows.Forms.RadioButton radioEnvLive;
+		private System.Windows.Forms.Button btnSettings;
 	}
 }

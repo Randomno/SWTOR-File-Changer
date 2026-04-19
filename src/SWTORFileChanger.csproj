@@ -28,9 +28,4 @@
     <PackageReference Include="System.Runtime.CompilerServices.Unsafe" Version="6.1.2" />
     <PackageReference Include="ZstdSharp.Port" Version="0.8.5" />
   </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\HashCreator\HashCreator.csproj" />
-    <ProjectReference Include="..\HashDictionary\HashDictionary.csproj" />
-    <ProjectReference Include="..\HasherFunctions\HasherFunctions.csproj" />
-  </ItemGroup>
 </Project>

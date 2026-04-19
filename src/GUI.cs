@@ -11,9 +11,6 @@ using System.IO;
 using System.Diagnostics;
 using static System.Windows.Forms.VisualStyles.VisualStyleElement;
 using Microsoft.VisualBasic;
-using HashCreatorNS;
-using HashDictionaryNS;
-using HasherFunctionsNS;
 using System.Collections;
 using ZstdSharp;
 using System.IO.Compression;
@@ -34,8 +31,6 @@ namespace FileChanger
 		public bool editNode;
 		public Hashtable nodeChangeList;
 		public Hashtable bucketList;
-		private HashDictionary hashDict;
-		private HashCreator hashCreated;
 		private Env env;
 
 		private TextBoxLogger logger;
@@ -49,8 +44,6 @@ namespace FileChanger
 			editNode = false;
 			nodeChangeList = new Hashtable();
 			bucketList = new Hashtable();
-			hashDict = new HashDictionary();
-			hashCreated = new HashCreator(hashDict, Hasher.HasherType.TOR);
 			InitializeComponent();
 			logger = new TextBoxLogger(textLog);
 			replacer = new FileReplacer(logger);
@@ -73,6 +66,33 @@ namespace FileChanger
 				Directory.CreateDirectory("extracted");
 			if (!File.Exists("settings.txt"))
 				File.WriteAllText("settings.txt", "");
+			ParseSettings();
+			// TODO constant
+			for (int i = 0; i < 997; i++)
+			{
+				bucketList.Add(Helpers.FileNameToHash("/resources/systemgenerated/buckets/" + i.ToString() + ".bkt"), true);
+			}
+			if (!File.Exists("installfolder.txt"))
+				File.WriteAllText("installfolder.txt", "");
+			string dirPath = File.ReadAllText("installfolder.txt");
+			if (Directory.Exists(dirPath))
+			{
+				textInstallationFolder.Text = dirPath;
+			}
+			FileSystemWatcher settingsWatcher = new(Directory.GetCurrentDirectory())
+			{
+				Filter = "settings.txt",
+				EnableRaisingEvents = true
+			};
+			settingsWatcher.Changed += OnChanged;
+		}
+		private void ParseSettings()
+		{
+			changeList.Clear();
+			origNamesList.Clear();
+			editNode = false;
+			nodeChangeList.Clear();
+			listChange.Items.Clear();
 			string[] settingsLines = File.ReadAllLines("settings.txt");
 			for (int index = 0; index < settingsLines.Length; index++)
 			{
@@ -104,18 +124,14 @@ namespace FileChanger
 					}
 				}
 			}
-			// TODO constant
-			for (int i = 0; i < 997; i++)
+		}
+		private void OnChanged(object sender, FileSystemEventArgs e)
+		{
+			if (e.ChangeType != WatcherChangeTypes.Changed)
 			{
-				bucketList.Add(Helpers.FileNameToHash("/resources/systemgenerated/buckets/" + i.ToString() + ".bkt"), true);
+				return;
 			}
-			if (!File.Exists("installfolder.txt"))
-				File.WriteAllText("installfolder.txt", "");
-			string dirPath = File.ReadAllText("installfolder.txt");
-			if (Directory.Exists(dirPath))
-			{
-				textInstallationFolder.Text = dirPath;
-			}
+			ParseSettings();
 		}
 		private List<string> GetTorFileList()
 		{
@@ -236,6 +252,20 @@ namespace FileChanger
 			{
 				env = Env.PTS;
 			}
+		}
+
+		private void btnSettings_Click(object sender, EventArgs e)
+		{
+
+			if (!File.Exists("settings.txt"))
+				File.WriteAllText("settings.txt", "");
+			new Process
+			{
+				StartInfo = new ProcessStartInfo("settings.txt")
+				{
+					UseShellExecute = true
+				}
+			}.Start();
 		}
 	}
 }

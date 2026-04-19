@@ -6,12 +6,6 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SWTORFileChanger", "src\SWT
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FileChangerTests", "FileChangerTests\FileChangerTests.csproj", "{7C8365BC-DACE-481A-A2D9-228724529B8E}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HashCreator", "HashCreator\HashCreator.csproj", "{889137C0-0BEE-4CF4-A801-B734F5B996F3}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HashDictionary", "HashDictionary\HashDictionary.csproj", "{4C246C3C-21E2-4364-9973-6A083E20E0C9}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HasherFunctions", "HasherFunctions\HasherFunctions.csproj", "{B27490E8-B5B5-47E2-B3DB-D3054348A9D5}"
-EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -25,18 +19,6 @@ Global
 		{7C8365BC-DACE-481A-A2D9-228724529B8E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{7C8365BC-DACE-481A-A2D9-228724529B8E}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{7C8365BC-DACE-481A-A2D9-228724529B8E}.Release|Any CPU.Build.0 = Release|Any CPU
-		{889137C0-0BEE-4CF4-A801-B734F5B996F3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{889137C0-0BEE-4CF4-A801-B734F5B996F3}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{889137C0-0BEE-4CF4-A801-B734F5B996F3}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{889137C0-0BEE-4CF4-A801-B734F5B996F3}.Release|Any CPU.Build.0 = Release|Any CPU
-		{4C246C3C-21E2-4364-9973-6A083E20E0C9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{4C246C3C-21E2-4364-9973-6A083E20E0C9}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{4C246C3C-21E2-4364-9973-6A083E20E0C9}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{4C246C3C-21E2-4364-9973-6A083E20E0C9}.Release|Any CPU.Build.0 = Release|Any CPU
-		{B27490E8-B5B5-47E2-B3DB-D3054348A9D5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{B27490E8-B5B5-47E2-B3DB-D3054348A9D5}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{B27490E8-B5B5-47E2-B3DB-D3054348A9D5}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{B27490E8-B5B5-47E2-B3DB-D3054348A9D5}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
