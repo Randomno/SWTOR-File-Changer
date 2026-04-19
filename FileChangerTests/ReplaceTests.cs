@@ -26,7 +26,6 @@ namespace FileChangerTests
 		[Fact]
 		public void ReplaceAndVerify()
 		{
-			var sha1 = SHA1.Create();
 			//string orig = "bwaui_nameplates.gfx"; // the original file, stored in this test directory
 			string path = "/resources/gfx/gfx_production/bwaui_nameplates.gfx"; // the internal path of the file
 			ulong testHash = Helpers.FileNameToHash(path); // the hash of the file path as used internally
@@ -47,7 +46,7 @@ namespace FileChangerTests
 			Env env = Env.Live;
 			byte[] replacementActual = replacer.ExtractFile(path, torFiles, env);
 
-			string newTorSha1 = Convert.ToHexString(sha1.ComputeHash
+			string newTorSha1 = Convert.ToHexString(SHA1.HashData
 				(File.ReadAllBytes(torFilePath))
 				);
 
