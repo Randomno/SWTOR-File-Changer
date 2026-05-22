@@ -79,10 +79,10 @@ namespace FileChanger
 		/// <summary>
 		/// Compresses raw bytes using Zstandard (TOR v6 expects ZSTD).
 		/// </summary>
-		public static byte[] Compress(byte[] bytes)
+		public static byte[] Compress(byte[] bytes, int level = 3)
 		{
 
-			return new Compressor()
+			return new Compressor(level)
 					   .Wrap(bytes)    // returns Span<byte>
 					   .ToArray();     // copy into byte[]
 		}

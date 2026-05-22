@@ -31,10 +31,18 @@ namespace FileChanger
 		public bool editNode;
 		public Hashtable nodeChangeList;
 		public Hashtable bucketList;
+
+		public Config config;
+
 		private Env env;
+
+		private FileSystemWatcher settingsWatcher;
 
 		private TextBoxLogger logger;
 		private FileReplacer replacer;
+
+		private readonly string FILES_DIR = "files";
+		private readonly int BUCKET_COUNT = 997; // todo make this configurable?
 
 		public GUI()
 		{
@@ -47,30 +55,42 @@ namespace FileChanger
 			InitializeComponent();
 			logger = new TextBoxLogger(textLog);
 			replacer = new FileReplacer(logger);
+
+			config = new Config();
 		}
 
 		private void ReportProgress(int value)
 		{
+			if (progressBar.InvokeRequired)
+			{
+				// threading stuff again
+				progressBar.BeginInvoke(new Action(() => ReportProgress(value)));
+				return;
+			}
 			progressBar.Value = value;
 			progressBar.Update();
 		}
 
 		private void GUI_Shown(object sender, EventArgs e)
 		{
-			changeList = new Hashtable();
 			if (!Directory.Exists("backup"))
 				Directory.CreateDirectory("backup");
-			if (!Directory.Exists("files"))
-				Directory.CreateDirectory("files");
+			if (!Directory.Exists(FILES_DIR))
+				Directory.CreateDirectory(FILES_DIR);
 			if (!Directory.Exists("extracted"))
 				Directory.CreateDirectory("extracted");
 			if (!File.Exists("settings.txt"))
 				File.WriteAllText("settings.txt", "");
-			ParseSettings();
+			ParseSettingsOld();
+			//ParseSettings();
 			// TODO constant
-			for (int i = 0; i < 997; i++)
+			for (int i = 0; i < BUCKET_COUNT; i++)
 			{
 				bucketList.Add(Helpers.FileNameToHash("/resources/systemgenerated/buckets/" + i.ToString() + ".bkt"), true);
+			}
+			for (int i = 0; i < BUCKET_COUNT; i++)
+			{
+				config.bucketList.Add(Helpers.FileNameToHash("/resources/systemgenerated/buckets/" + i.ToString() + ".bkt"));
 			}
 			if (!File.Exists("installfolder.txt"))
 				File.WriteAllText("installfolder.txt", "");
@@ -79,7 +99,7 @@ namespace FileChanger
 			{
 				textInstallationFolder.Text = dirPath;
 			}
-			FileSystemWatcher settingsWatcher = new(Directory.GetCurrentDirectory())
+			settingsWatcher = new(Directory.GetCurrentDirectory())
 			{
 				Filter = "settings.txt",
 				EnableRaisingEvents = true
@@ -87,6 +107,35 @@ namespace FileChanger
 			settingsWatcher.Changed += OnChanged;
 		}
 		private void ParseSettings()
+		{
+			config.changeList.Clear();
+			config.nodeChangeList.Clear();
+			listChange.Items.Clear();
+			string[] settingsLines = File.ReadAllLines("settings.txt");
+			for (int index = 0; index < settingsLines.Length; index++)
+			{
+				string[] currentLine = settingsLines[index].Split(' ');
+				if (currentLine.Length >=3)
+				{
+					string replaceOp = currentLine[0].ToLower();
+					if (replaceOp == "replace")
+					{
+						listChange.Items.Add("Replace " + currentLine[1] + " by " + currentLine[2]);
+						if (!config.changeList.ContainsKey(currentLine[1]))
+						{
+							config.changeList.Add(currentLine[1], FILES_DIR + currentLine[2]);
+						}
+					}
+					else if (replaceOp == "replacenode")
+					{
+						listChange.Items.Add("Replace Node " + currentLine[1] + " by " + currentLine[2]);
+						if (!config.nodeChangeList.ContainsKey(currentLine[1]))
+							config.nodeChangeList.Add(currentLine[1], currentLine[2]);
+					}
+				}
+			}
+		}
+		private void ParseSettingsOld()
 		{
 			changeList.Clear();
 			origNamesList.Clear();
@@ -131,10 +180,15 @@ namespace FileChanger
 			{
 				return;
 			}
-			ParseSettings();
+			ParseSettingsOld();
 		}
 		private List<string> GetTorFileList()
 		{
+			if (!Directory.Exists(textInstallationFolder.Text + "\\Assets"))
+			{
+				logger.Error("Assets folder not found in selected directory!");
+				return null;
+			}
 			List<string> files = Directory.GetFiles(textInstallationFolder.Text + "\\Assets", "swtor_*.tor", SearchOption.TopDirectoryOnly).ToList();
 			files.Add(textInstallationFolder.Text + "\\swtor\\retailclient\\main_gfx_1.tor");
 
@@ -157,6 +211,7 @@ namespace FileChanger
 		private void btnChangeFiles_Click(object sender, EventArgs e)
 		{
 			List<string> files = GetTorFileList();
+			if (files == null) return;
 			progressBar.Maximum = files.Count;
 			Enabled = false;
 			for (int index = 0; index < files.Count; index++)
@@ -195,7 +250,7 @@ namespace FileChanger
 			File.WriteAllText("installfolder.txt", textInstallationFolder.Text);
 		}
 
-		private void btnExtractFile_Click(object sender, EventArgs e)
+		private async void btnExtractFile_Click(object sender, EventArgs e)
 		{
 			// TODO maybe remove Visual Basic element
 			string fileName = Interaction.InputBox("Please enter the file that should be extracted", "Extract a file");
@@ -206,24 +261,24 @@ namespace FileChanger
 			progressBar.Maximum = torFiles.Count;
 			Enabled = false;
 
-			byte[] extractedData = replacer.ExtractFile(fileName, torFiles, env, new Progress<int>(ReportProgress));
+			byte[] extractedData = await Task.Run(() =>
+				replacer.ExtractFile(fileName, torFiles, env, new Progress<int>(ReportProgress)));
 
 			if (extractedData != null)
 			{
-				//string sha1 = Convert.ToHexString(SHA1.HashData(extractedData));
 				string outputPath = "extracted\\" + fileName.Substring(fileName.LastIndexOf("/") + 1);
 				File.WriteAllBytes(outputPath, extractedData);
 				logger.Log("The file " + fileName + " was successfully extracted!");
 			}
 			else
 			{
-				logger.Log("The file " + fileName + " could not be found.");
+				logger.Error("The file " + fileName + " could not be found.");
 			}
 			progressBar.Value = 0;
 			Enabled = true;
 		}
 
-		private void btnExtractNode_Click(object sender, EventArgs e)
+		private async void btnExtractNode_Click(object sender, EventArgs e)
 		{
 			// 1) Ask for the specific node to extract
 			string nodeKey = Interaction.InputBox(
@@ -235,7 +290,30 @@ namespace FileChanger
 			string assetsDir = Path.Combine(textInstallationFolder.Text, "Assets");
 			List<string> torFiles = Directory.GetFiles(assetsDir, "swtor_*main_global_1.tor").ToList();
 
-			replacer.ExtractNode(nodeKey, torFiles, bucketList);
+			// TODO progress bar
+			Enabled = false;
+			byte[] extractedData = await Task.Run(() =>
+				replacer.ExtractNode(nodeKey, torFiles, bucketList, new Progress<int>(ReportProgress)));
+
+			if (extractedData != null)
+			{
+
+				string safe = nodeKey
+					.Replace("/", "_")
+					.Replace("\\", "_");
+				string outputPath = Path.Combine(
+					"extracted",
+					safe + ".node"
+				);
+				File.WriteAllBytes(outputPath, extractedData);
+				logger.Log($"Extracted node \"{nodeKey}\".");
+			}
+			else
+			{
+				logger.Log($"Could not find node \"{nodeKey}\".");
+			}
+			progressBar.Value = 0;
+			Enabled = true;
 		}
 
 		private void radioEnvLive_CheckedChanged(object sender, EventArgs e)
@@ -266,6 +344,38 @@ namespace FileChanger
 					UseShellExecute = true
 				}
 			}.Start();
+		}
+
+		private void button1_Click(object sender, EventArgs e)
+		{
+			List<string> files = GetTorFileList();
+			if (files == null) return;
+			progressBar.Maximum = files.Count;
+			Enabled = false;
+			for (int index = 0; index < files.Count; index++)
+			{
+				progressBar.Value = index;
+				Application.DoEvents();
+				string str = files[index].Substring(checked(files[index].LastIndexOf("\\") + 1));
+				if (!(radioEnvPTS.Checked & !str.StartsWith("swtor_test_")) && !(radioEnvLive.Checked & str.StartsWith("swtor_test_")))
+					replacer.LoadArchiveReplaceFilesTest(files[index], chkBackup.Checked, editNode, changeList, origNamesList, nodeChangeList, bucketList);
+			}
+			if (false)
+			{
+				// TODO
+				logger.Log("Verify");
+			}
+			else
+			{
+				logger.Log("Finished editing files!");
+			}
+			progressBar.Value = 0;
+			Enabled = true;
+		}
+
+		private void button2_Click(object sender, EventArgs e)
+		{
+			replacer.Replace(config);
 		}
 	}
 }

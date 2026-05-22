@@ -38,11 +38,13 @@
 			btnExtractFile = new System.Windows.Forms.Button();
 			btnExtractNode = new System.Windows.Forms.Button();
 			progressBar = new System.Windows.Forms.ProgressBar();
-			textLog = new System.Windows.Forms.TextBox();
+			textLog = new System.Windows.Forms.RichTextBox();
 			chkBackup = new System.Windows.Forms.CheckBox();
 			radioEnvPTS = new System.Windows.Forms.RadioButton();
 			radioEnvLive = new System.Windows.Forms.RadioButton();
 			btnSettings = new System.Windows.Forms.Button();
+			button1 = new System.Windows.Forms.Button();
+			button2 = new System.Windows.Forms.Button();
 			SuspendLayout();
 			// 
 			// btnChangeFiles
@@ -146,14 +148,15 @@
 			// textLog
 			// 
 			textLog.Anchor = System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right;
+			textLog.Font = new System.Drawing.Font("Cascadia Mono", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, 0);
 			textLog.Location = new System.Drawing.Point(15, 409);
-			textLog.Multiline = true;
 			textLog.Name = "textLog";
 			textLog.ReadOnly = true;
-			textLog.ScrollBars = System.Windows.Forms.ScrollBars.Vertical;
+			textLog.ScrollBars = System.Windows.Forms.RichTextBoxScrollBars.Vertical;
 			textLog.Size = new System.Drawing.Size(831, 157);
 			textLog.TabIndex = 10;
 			textLog.TabStop = false;
+			textLog.Text = "";
 			// 
 			// chkBackup
 			// 
@@ -205,11 +208,33 @@
 			btnSettings.UseVisualStyleBackColor = true;
 			btnSettings.Click += btnSettings_Click;
 			// 
+			// button1
+			// 
+			button1.Location = new System.Drawing.Point(764, 438);
+			button1.Name = "button1";
+			button1.Size = new System.Drawing.Size(75, 23);
+			button1.TabIndex = 15;
+			button1.Text = "button1";
+			button1.UseVisualStyleBackColor = true;
+			button1.Click += button1_Click;
+			// 
+			// button2
+			// 
+			button2.Location = new System.Drawing.Point(764, 480);
+			button2.Name = "button2";
+			button2.Size = new System.Drawing.Size(75, 23);
+			button2.TabIndex = 16;
+			button2.Text = "button2";
+			button2.UseVisualStyleBackColor = true;
+			button2.Click += button2_Click;
+			// 
 			// GUI
 			// 
 			AutoScaleDimensions = new System.Drawing.SizeF(7F, 15F);
 			AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
 			ClientSize = new System.Drawing.Size(858, 578);
+			Controls.Add(button2);
+			Controls.Add(button1);
 			Controls.Add(btnSettings);
 			Controls.Add(radioEnvLive);
 			Controls.Add(radioEnvPTS);
@@ -242,10 +267,12 @@
 		private System.Windows.Forms.Button btnExtractFile;
 		private System.Windows.Forms.Button btnExtractNode;
 		private System.Windows.Forms.ProgressBar progressBar;
-		private System.Windows.Forms.TextBox textLog;
+		private System.Windows.Forms.RichTextBox textLog;
 		private System.Windows.Forms.CheckBox chkBackup;
 		private System.Windows.Forms.RadioButton radioEnvPTS;
 		private System.Windows.Forms.RadioButton radioEnvLive;
 		private System.Windows.Forms.Button btnSettings;
+		private System.Windows.Forms.Button button1;
+		private System.Windows.Forms.Button button2;
 	}
 }

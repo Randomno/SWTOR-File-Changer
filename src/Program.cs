@@ -7,39 +7,70 @@ using System.Threading.Tasks;
 
 namespace FileChanger
 {
+	public enum LogLevel { Info, Warning, Error }
 	public interface ILogger
 	{
-		void Log(string message);
+		void Log(object message, LogLevel level = LogLevel.Info);
+
+		void Error(object message);
+
+		void Warning(object message);
 	}
 
 	public class TextBoxLogger : ILogger
 	{
-		private TextBox _textBox;
+		private RichTextBox _textBox;
 
-		public TextBoxLogger(TextBox textBox)
+		public TextBoxLogger(RichTextBox textBox)
 		{
 			_textBox = textBox;
 		}
 
-		public void Log(string message)
+		public void Log(object message, LogLevel level = LogLevel.Info)
 		{
 			if (_textBox.InvokeRequired)
 			{
 				// required for threading stuff apparently
-				_textBox.Invoke(() => _textBox.AppendText(message + Environment.NewLine));
+				_textBox.BeginInvoke(() => Log(message, level));
+				return;
 			}
-			else
+
+			var color = level switch
 			{
-				_textBox.AppendText(message + Environment.NewLine);
-			}
+				LogLevel.Error => System.Drawing.Color.Red,
+				LogLevel.Warning => System.Drawing.Color.DarkOrange,
+				_ => _textBox.ForeColor,
+			};
+
+			_textBox.SelectionColor = color;
+			_textBox.AppendText(message + Environment.NewLine);
+			_textBox.SelectionColor = _textBox.ForeColor;
+
 		}
+		public void Error(object message)
+		{
+			Log(message, LogLevel.Error);
+		}
+		public void Warning(object message)
+		{
+			Log(message, LogLevel.Warning);
+		}
+
 	}
 
 	public class ConsoleLogger : ILogger
 	{
-		public void Log(string message)
+		public void Log(object message, LogLevel level = LogLevel.Info)
 		{
 			Console.WriteLine(message);
+		}
+		public void Error(object message)
+		{
+			Log(message, LogLevel.Error);
+		}
+		public void Warning(object message)
+		{
+			Log(message, LogLevel.Warning);
 		}
 	}
 
