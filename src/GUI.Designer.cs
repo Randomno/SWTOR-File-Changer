@@ -33,7 +33,7 @@
 			textInstallationFolder = new System.Windows.Forms.TextBox();
 			btnBrowse = new System.Windows.Forms.Button();
 			label2 = new System.Windows.Forms.Label();
-			listChange = new System.Windows.Forms.ListBox();
+			GuiChangeList = new System.Windows.Forms.ListBox();
 			btnRestoreBackup = new System.Windows.Forms.Button();
 			btnExtractFile = new System.Windows.Forms.Button();
 			btnExtractNode = new System.Windows.Forms.Button();
@@ -43,8 +43,6 @@
 			radioEnvPTS = new System.Windows.Forms.RadioButton();
 			radioEnvLive = new System.Windows.Forms.RadioButton();
 			btnSettings = new System.Windows.Forms.Button();
-			button1 = new System.Windows.Forms.Button();
-			button2 = new System.Windows.Forms.Button();
 			SuspendLayout();
 			// 
 			// btnChangeFiles
@@ -97,15 +95,15 @@
 			label2.TabIndex = 4;
 			label2.Text = "List of files to change:";
 			// 
-			// listChange
+			// GuiChangeList
 			// 
-			listChange.Anchor = System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right;
-			listChange.FormattingEnabled = true;
-			listChange.Location = new System.Drawing.Point(13, 72);
-			listChange.Name = "listChange";
-			listChange.Size = new System.Drawing.Size(834, 289);
-			listChange.TabIndex = 5;
-			listChange.TabStop = false;
+			GuiChangeList.Anchor = System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right;
+			GuiChangeList.FormattingEnabled = true;
+			GuiChangeList.Location = new System.Drawing.Point(13, 72);
+			GuiChangeList.Name = "GuiChangeList";
+			GuiChangeList.Size = new System.Drawing.Size(834, 289);
+			GuiChangeList.TabIndex = 5;
+			GuiChangeList.TabStop = false;
 			// 
 			// btnRestoreBackup
 			// 
@@ -208,33 +206,11 @@
 			btnSettings.UseVisualStyleBackColor = true;
 			btnSettings.Click += btnSettings_Click;
 			// 
-			// button1
-			// 
-			button1.Location = new System.Drawing.Point(764, 438);
-			button1.Name = "button1";
-			button1.Size = new System.Drawing.Size(75, 23);
-			button1.TabIndex = 15;
-			button1.Text = "button1";
-			button1.UseVisualStyleBackColor = true;
-			button1.Click += button1_Click;
-			// 
-			// button2
-			// 
-			button2.Location = new System.Drawing.Point(764, 480);
-			button2.Name = "button2";
-			button2.Size = new System.Drawing.Size(75, 23);
-			button2.TabIndex = 16;
-			button2.Text = "button2";
-			button2.UseVisualStyleBackColor = true;
-			button2.Click += button2_Click;
-			// 
 			// GUI
 			// 
 			AutoScaleDimensions = new System.Drawing.SizeF(7F, 15F);
 			AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
 			ClientSize = new System.Drawing.Size(858, 578);
-			Controls.Add(button2);
-			Controls.Add(button1);
 			Controls.Add(btnSettings);
 			Controls.Add(radioEnvLive);
 			Controls.Add(radioEnvPTS);
@@ -244,7 +220,7 @@
 			Controls.Add(btnExtractNode);
 			Controls.Add(btnExtractFile);
 			Controls.Add(btnRestoreBackup);
-			Controls.Add(listChange);
+			Controls.Add(GuiChangeList);
 			Controls.Add(label2);
 			Controls.Add(btnBrowse);
 			Controls.Add(textInstallationFolder);
@@ -262,7 +238,7 @@
 		private System.Windows.Forms.TextBox textInstallationFolder;
 		private System.Windows.Forms.Button btnBrowse;
 		private System.Windows.Forms.Label label2;
-		private System.Windows.Forms.ListBox listChange;
+		private System.Windows.Forms.ListBox GuiChangeList;
 		private System.Windows.Forms.Button btnRestoreBackup;
 		private System.Windows.Forms.Button btnExtractFile;
 		private System.Windows.Forms.Button btnExtractNode;
@@ -272,7 +248,5 @@
 		private System.Windows.Forms.RadioButton radioEnvPTS;
 		private System.Windows.Forms.RadioButton radioEnvLive;
 		private System.Windows.Forms.Button btnSettings;
-		private System.Windows.Forms.Button button1;
-		private System.Windows.Forms.Button button2;
 	}
 }

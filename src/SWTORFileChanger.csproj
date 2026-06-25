@@ -23,6 +23,9 @@
     <NoWarn>1701;1702;IDE1006</NoWarn>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Remove="temporary.cs" />
+  </ItemGroup>
+  <ItemGroup>
     <PackageReference Include="Crc32.NET" Version="1.2.0" />
     <PackageReference Include="Microsoft.VisualBasic" Version="10.3.0" />
     <PackageReference Include="System.Runtime.CompilerServices.Unsafe" Version="6.1.2" />

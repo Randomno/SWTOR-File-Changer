@@ -14,6 +14,7 @@ using Microsoft.VisualBasic;
 using System.Collections;
 using ZstdSharp;
 using System.IO.Compression;
+using System.ComponentModel.DataAnnotations;
 
 namespace FileChanger
 {
@@ -25,33 +26,20 @@ namespace FileChanger
 	}
 	public partial class GUI : Form
 	{
-
-		public Hashtable changeList;
-		public Hashtable origNamesList;
-		public bool editNode;
-		public Hashtable nodeChangeList;
-		public Hashtable bucketList;
-
 		public Config config;
 
 		private Env env;
 
 		private FileSystemWatcher settingsWatcher;
 
-		private TextBoxLogger logger;
-		private FileReplacer replacer;
+		private readonly TextBoxLogger logger;
+		private readonly FileReplacer replacer;
 
 		private readonly string FILES_DIR = "files";
-		private readonly int BUCKET_COUNT = 997; // todo make this configurable?
 
 		public GUI()
 		{
 			Shown += new EventHandler(GUI_Shown);
-			changeList = new Hashtable();
-			origNamesList = new Hashtable();
-			editNode = false;
-			nodeChangeList = new Hashtable();
-			bucketList = new Hashtable();
 			InitializeComponent();
 			logger = new TextBoxLogger(textLog);
 			replacer = new FileReplacer(logger);
@@ -81,17 +69,8 @@ namespace FileChanger
 				Directory.CreateDirectory("extracted");
 			if (!File.Exists("settings.txt"))
 				File.WriteAllText("settings.txt", "");
-			ParseSettingsOld();
-			//ParseSettings();
-			// TODO constant
-			for (int i = 0; i < BUCKET_COUNT; i++)
-			{
-				bucketList.Add(Helpers.FileNameToHash("/resources/systemgenerated/buckets/" + i.ToString() + ".bkt"), true);
-			}
-			for (int i = 0; i < BUCKET_COUNT; i++)
-			{
-				config.bucketList.Add(Helpers.FileNameToHash("/resources/systemgenerated/buckets/" + i.ToString() + ".bkt"));
-			}
+			ParseSettings();
+
 			if (!File.Exists("installfolder.txt"))
 				File.WriteAllText("installfolder.txt", "");
 			string dirPath = File.ReadAllText("installfolder.txt");
@@ -109,8 +88,9 @@ namespace FileChanger
 		private void ParseSettings()
 		{
 			config.changeList.Clear();
+			config.hashChangeList.Clear();
 			config.nodeChangeList.Clear();
-			listChange.Items.Clear();
+			GuiChangeList.Items.Clear();
 			string[] settingsLines = File.ReadAllLines("settings.txt");
 			for (int index = 0; index < settingsLines.Length; index++)
 			{
@@ -118,58 +98,25 @@ namespace FileChanger
 				if (currentLine.Length >=3)
 				{
 					string replaceOp = currentLine[0].ToLower();
-					if (replaceOp == "replace")
+					switch (replaceOp)
 					{
-						listChange.Items.Add("Replace " + currentLine[1] + " by " + currentLine[2]);
-						if (!config.changeList.ContainsKey(currentLine[1]))
-						{
-							config.changeList.Add(currentLine[1], FILES_DIR + currentLine[2]);
-						}
-					}
-					else if (replaceOp == "replacenode")
-					{
-						listChange.Items.Add("Replace Node " + currentLine[1] + " by " + currentLine[2]);
-						if (!config.nodeChangeList.ContainsKey(currentLine[1]))
-							config.nodeChangeList.Add(currentLine[1], currentLine[2]);
-					}
-				}
-			}
-		}
-		private void ParseSettingsOld()
-		{
-			changeList.Clear();
-			origNamesList.Clear();
-			editNode = false;
-			nodeChangeList.Clear();
-			listChange.Items.Clear();
-			string[] settingsLines = File.ReadAllLines("settings.txt");
-			for (int index = 0; index < settingsLines.Length; index++)
-			{
-				string[] currentLine = settingsLines[index].Split(' ');
-				if (currentLine.Length != 0)
-				{
-					string replaceOp = currentLine[0].ToLower();
-					if (replaceOp == "replace")
-					{
-						if (currentLine.Length >= 3)
-						{
-							listChange.Items.Add("Replace " + currentLine[1] + " by " + currentLine[2]);
-							if (!changeList.ContainsKey(Helpers.FileNameToHash(currentLine[1])))
-							{
-								changeList.Add(Helpers.FileNameToHash(currentLine[1]), currentLine[2]);
-								origNamesList.Add(Helpers.FileNameToHash(currentLine[1]), currentLine[1]);
-							}
-						}
-					}
-					else if (replaceOp == "replacehash")
-					{
-					}
-					else if (replaceOp == "replacenode" && currentLine.Length >= 3)
-					{
-						listChange.Items.Add("Replace Node " + currentLine[1] + " by " + currentLine[2]);
-						editNode = true;
-						if (!nodeChangeList.ContainsKey(currentLine[1]))
-							nodeChangeList.Add(currentLine[1], currentLine[2]);
+						case "replace":
+							GuiChangeList.Items.Add("Replace " + currentLine[1] + " by " + currentLine[2]);
+							if (!config.changeList.ContainsKey(currentLine[1]))
+								config.changeList.Add(currentLine[1], Path.Combine(FILES_DIR, currentLine[2]));
+							break;
+						case "replacehash":
+							GuiChangeList.Items.Add("Replace " + currentLine[1] + " by " + currentLine[2]);
+							var parts = currentLine[1].Split("_");
+							ulong hash = Convert.ToUInt32(parts[0], 16) | ((ulong)Convert.ToUInt32(parts[1], 16) << 32);
+							if (!config.hashChangeList.ContainsKey(hash))
+								config.hashChangeList.Add(hash, Path.Combine(FILES_DIR, currentLine[2]));
+							break;
+						case "replacenode":
+							GuiChangeList.Items.Add("Replace Node " + currentLine[1] + " by " + currentLine[2]);
+							if (!config.nodeChangeList.ContainsKey(currentLine[1]))
+								config.nodeChangeList.Add(currentLine[1], currentLine[2]);
+							break;
 					}
 				}
 			}
@@ -180,7 +127,7 @@ namespace FileChanger
 			{
 				return;
 			}
-			ParseSettingsOld();
+			ParseSettings();
 		}
 		private List<string> GetTorFileList()
 		{
@@ -199,40 +146,13 @@ namespace FileChanger
 		{
 			FolderBrowserDialog folderBrowserDialog = new()
 			{
-				Description = "Please select the folder where you have SWTOR installed."
+				Description = "Select SWTOR installation folder"
 			};
 			if (folderBrowserDialog.ShowDialog(this) == DialogResult.OK)
 			{
 				// triggers textInstallationFolder_TextChanged
 				textInstallationFolder.Text = folderBrowserDialog.SelectedPath;
 			}
-		}
-
-		private void btnChangeFiles_Click(object sender, EventArgs e)
-		{
-			List<string> files = GetTorFileList();
-			if (files == null) return;
-			progressBar.Maximum = files.Count;
-			Enabled = false;
-			for (int index = 0; index < files.Count; index++)
-			{
-				progressBar.Value = index;
-				Application.DoEvents();
-				string str = files[index].Substring(checked(files[index].LastIndexOf("\\") + 1));
-				if (!(radioEnvPTS.Checked & !str.StartsWith("swtor_test_")) && !(radioEnvLive.Checked & str.StartsWith("swtor_test_")))
-					replacer.LoadArchiveReplaceFiles(files[index], chkBackup.Checked, editNode, changeList, origNamesList, nodeChangeList, bucketList);
-			}
-			if (false)
-			{
-				// TODO
-				logger.Log("Verify");
-			}
-			else
-			{
-				logger.Log("Finished editing files!");
-			}
-			progressBar.Value = 0;
-			Enabled = true;
 		}
 
 		private void btnRestoreBackup_Click(object sender, EventArgs e)
@@ -257,12 +177,12 @@ namespace FileChanger
 			if (fileName == "")
 				return;
 
-			List<string> torFiles = GetTorFileList();
-			progressBar.Maximum = torFiles.Count;
+			config.torFiles = GetTorFileList();
+			progressBar.Maximum = config.torFiles.Count;
 			Enabled = false;
 
 			byte[] extractedData = await Task.Run(() =>
-				replacer.ExtractFile(fileName, torFiles, env, new Progress<int>(ReportProgress)));
+				replacer.ExtractFile(config, fileName));
 
 			if (extractedData != null)
 			{
@@ -293,7 +213,7 @@ namespace FileChanger
 			// TODO progress bar
 			Enabled = false;
 			byte[] extractedData = await Task.Run(() =>
-				replacer.ExtractNode(nodeKey, torFiles, bucketList, new Progress<int>(ReportProgress)));
+				replacer.ExtractNode(config));
 
 			if (extractedData != null)
 			{
@@ -346,35 +266,10 @@ namespace FileChanger
 			}.Start();
 		}
 
-		private void button1_Click(object sender, EventArgs e)
+		private void btnChangeFiles_Click(object sender, EventArgs e)
 		{
-			List<string> files = GetTorFileList();
-			if (files == null) return;
-			progressBar.Maximum = files.Count;
-			Enabled = false;
-			for (int index = 0; index < files.Count; index++)
-			{
-				progressBar.Value = index;
-				Application.DoEvents();
-				string str = files[index].Substring(checked(files[index].LastIndexOf("\\") + 1));
-				if (!(radioEnvPTS.Checked & !str.StartsWith("swtor_test_")) && !(radioEnvLive.Checked & str.StartsWith("swtor_test_")))
-					replacer.LoadArchiveReplaceFilesTest(files[index], chkBackup.Checked, editNode, changeList, origNamesList, nodeChangeList, bucketList);
-			}
-			if (false)
-			{
-				// TODO
-				logger.Log("Verify");
-			}
-			else
-			{
-				logger.Log("Finished editing files!");
-			}
-			progressBar.Value = 0;
-			Enabled = true;
-		}
-
-		private void button2_Click(object sender, EventArgs e)
-		{
+			config.torFiles = GetTorFileList();
+			config.createBackup = chkBackup.Checked;
 			replacer.Replace(config);
 		}
 	}

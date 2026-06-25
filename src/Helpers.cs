@@ -77,13 +77,25 @@ namespace FileChanger
 
 
 		/// <summary>
-		/// Compresses raw bytes using Zstandard (TOR v6 expects ZSTD).
+		/// Compresses raw bytes using Zstandard.
+		/// level -7 to 22 (22 is strongest compression)
 		/// </summary>
 		public static byte[] Compress(byte[] bytes, int level = 3)
 		{
 
 			return new Compressor(level)
 					   .Wrap(bytes)    // returns Span<byte>
+					   .ToArray();     // copy into byte[]
+		}
+
+		/// <summary>
+		/// Decompresses raw bytes using Zstandard.
+		/// </summary>
+		public static byte[] Decompress(byte[] bytes)
+		{
+
+			return new Decompressor()
+					   .Unwrap(bytes)    // returns Span<byte>
 					   .ToArray();     // copy into byte[]
 		}
 

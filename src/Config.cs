@@ -9,11 +9,12 @@ namespace FileChanger
 {
     public class Config
 	{
-		public List<string> torFiles { get; set; }
-		public Dictionary<string, string> changeList { get; set; }
-		public Dictionary<string, string> nodeChangeList { get; set; }
-		// todo don't pass this?
-		public HashSet<ulong> bucketList { get; set; } = new HashSet<ulong>();
+		public List<string> torFiles { get; set; } = new();
+		public Dictionary<string, string> changeList { get; set; } = new(); // game path, replacement file
+		public Dictionary<ulong, string> hashChangeList { get; set; } = new(); // hash, replacement file
+		public Dictionary<string, string> nodeChangeList { get; set; } = new(); // node, replacement file
+
+		//public HashSet<ulong> bucketList { get; set; } = new(); // todo don't pass this?
 		public bool createBackup { get; set; }
 	}
 }
