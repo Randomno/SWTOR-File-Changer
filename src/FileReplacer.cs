@@ -583,7 +583,7 @@ namespace FileChanger
 			}
 		}
 
-		public void RestoreBackup(string[] backups, string installFolder, IProgress<int> progress = null)
+		public void RestoreBackup(string[] backups, string installFolder)
 		{
 			int i = 0;
 			if (backups.Length == 0)
@@ -593,7 +593,6 @@ namespace FileChanger
 			}
 			foreach (var path in backups)
 			{
-				progress?.Report(i++);
 				string fileName = Path.GetFileName(path);
 				string targetPath = fileName.Equals("main_gfx_1.tor", StringComparison.OrdinalIgnoreCase)
 					? installFolder + "\\swtor\\retailclient\\" + fileName

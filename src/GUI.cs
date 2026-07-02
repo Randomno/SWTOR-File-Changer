@@ -152,7 +152,7 @@ namespace FileChanger
 			string[] files = Directory.GetFiles("backup", "*.tor", SearchOption.TopDirectoryOnly);
 			progressBar.Maximum = files.Length;
 			Enabled = false;
-			replacer.RestoreBackup(files, textInstallationFolder.Text, new Progress<int>(ReportProgress));
+			replacer.RestoreBackup(files, textInstallationFolder.Text);
 			progressBar.Value = 0;
 			Enabled = true;
 		}
