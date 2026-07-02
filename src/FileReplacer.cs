@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 
@@ -25,28 +24,385 @@ namespace FileChanger
 			public ushort compressionType;
 		}
 
-		public void RestoreBackup(string[] backups, string installFolder, IProgress<int> progress = null)
+		private struct NodeEntry
 		{
-			int i = 0;
-			if (backups.Length == 0)
-			{
-				logger.Warning("Nothing to restore!");
-				return;
-			}
-			foreach (var path in backups)
-			{
-				progress?.Report(i++);
-				string fileName = Path.GetFileName(path);
-				string targetPath = fileName.Equals("main_gfx_1.tor", StringComparison.OrdinalIgnoreCase)
-					? installFolder + "\\swtor\\retailclient\\" + fileName
-					: installFolder + "\\Assets\\" + fileName;
-				File.Copy(path, targetPath, true);
-				File.Delete(path);
-				logger.Log("Replaced " + targetPath + " with " + fileName);
-			}
-			logger.Log("Finished restoring backup!");
+			public string name;
+			public long dataOffset;
+			public int dataSize;
+			public int isCompressed;
+			public byte[] header;
+
+			public int paddingLength;
+			public ulong[] glommedClasses; // may be empty
+			public byte[] nodeData;
 		}
 
+		public void Replace(Config config)
+		{
+			ReplaceNodes(config);
+			ReplaceFiles(config);
+		}
+
+		private HashSet<ulong> HashBuckets()
+		{
+			HashSet<ulong> bucketHashes = new();
+			// this was faster to do when the program starts, but it's fast anyway and saves passing the bucket list in config
+			for (int i = 0; i <= BUCKET_LIMIT; i++)
+			{
+				ulong hash = Helpers.FileNameToHash("/resources/systemgenerated/buckets/" + i.ToString() + ".bkt");
+				bucketHashes.Add(hash);
+			}
+			return bucketHashes;
+		}
+
+		public void ReplaceNodes(Config config)
+		{
+			HashSet<ulong> bucketHashes = HashBuckets();
+			List<FileEntry> buckets = new();
+			string mainGlobalPath = "";
+
+			foreach (var archivePath in config.torFiles)
+			{
+				if (!archivePath.Contains("main_global_1.tor"))
+				{
+					continue;
+				}
+
+				mainGlobalPath = archivePath;
+
+				buckets = FindMatchesInArchive(archivePath, bucketHashes, out _);
+			}
+
+			if (buckets.Count == 0)
+			{
+				logger.Error("Could not find any bkt files.");
+				return;
+			}
+
+			using FileStream output = new(mainGlobalPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+			using BinaryReader br = new(output);
+
+			foreach (FileEntry entry in buckets)
+			{
+				br.BaseStream.Position = (long)(entry.offset + entry.metaDataSize);
+				byte[] bucket = br.ReadBytes((int)entry.comprSize);
+
+				if (entry.compressionType == 1)
+					bucket = Helpers.Decompress(bucket);
+
+				HashSet<string> targets = new(config.nodeChangeList.Keys);
+				List<NodeEntry> matches = FindNodeMatchesInBucket(bucket, targets);
+
+				if (matches.Count == 0)
+					continue;
+
+				bool modified = ApplyNodeReplacements(bucket, matches, config.nodeChangeList);
+				if (!modified)
+					continue;
+
+				// todo don't do this since it's tied to gui config, but not sure how to do properly
+				string fullPath = Path.Combine("files", entry.hash.ToString() + ".txt");
+				File.WriteAllBytes(fullPath, bucket);
+				config.hashChangeList.Add(entry.hash, fullPath);
+			}
+
+			return;
+		}
+
+		public byte[] ExtractNode(Config config, string nodePath)
+		{
+			// todo a lot of this method is duplicated with ReplaceNodes
+			HashSet<ulong> bucketHashes = HashBuckets();
+			List<FileEntry> buckets = new();
+			var target = new HashSet<string> { nodePath };
+			string mainGlobalPath = "";
+
+			foreach (var archivePath in config.torFiles)
+			{
+				if (!archivePath.Contains("main_global_1.tor"))
+				{
+					continue;
+				}
+
+				mainGlobalPath = archivePath;
+
+				buckets = FindMatchesInArchive(archivePath, bucketHashes, out _);
+			}
+
+			if (buckets.Count == 0)
+			{
+				logger.Error("Could not find any bkt files.");
+				return null;
+			}
+
+			using FileStream output = new(mainGlobalPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+			using BinaryReader br = new(output);
+
+			foreach (FileEntry entry in buckets)
+			{
+				br.BaseStream.Position = (long)(entry.offset + entry.metaDataSize);
+				byte[] bucket = br.ReadBytes((int)entry.comprSize);
+
+				if (entry.compressionType == 1)
+					bucket = Helpers.Decompress(bucket);
+
+				List<NodeEntry> matches = FindNodeMatchesInBucket(bucket, target);
+
+				if (matches.Count == 0)
+					continue;
+
+				NodeEntry nodeEntry = matches[0];
+
+				/*
+				 * byte[] node = new byte[nodeEntry.dataSize];
+				Array.Copy(bucket, nodeEntry.dataOffset, node, 0, nodeEntry.dataSize);
+
+				if (nodeEntry.isCompressed == 1)
+					node = Helpers.Decompress(node);
+				*/
+
+				return nodeEntry.nodeData;
+			}
+
+			return null;
+		}
+
+		private bool ApplyNodeReplacements(byte[] bucket, List<NodeEntry> matches, Dictionary<string, string> nodeChangeList)
+		{
+			using var ms = new MemoryStream(bucket);
+			using var bw = new BinaryWriter(ms);
+			bool modified = false;
+
+			foreach (NodeEntry nodeEntry in matches)
+			{
+				string replacementNode = nodeChangeList[nodeEntry.name];
+
+				if (!File.Exists(replacementNode))
+				{
+					logger.Warning("File " + replacementNode + " could not be found.");
+					continue;
+				}
+
+				byte[] strippedNodeData = File.ReadAllBytes(replacementNode);
+
+				if (strippedNodeData[0] == 0)
+				{
+					logger.Warning("replacement node " + replacementNode + " starts with 0, this will likely cause an error");
+				}
+
+				byte[] nodeData = new byte[nodeEntry.header.Length + strippedNodeData.Length];
+
+				nodeEntry.header.CopyTo(nodeData, 0);
+				strippedNodeData.CopyTo(nodeData, nodeEntry.header.Length);
+
+				int skippableFrameLength = -1;
+
+				if (nodeEntry.isCompressed == 1)
+				{
+					byte[] comprNode = Helpers.Compress(nodeData, 22);
+
+					if (comprNode.Length + 8 <= nodeEntry.dataSize)
+					{
+						logger.Debug("replace node in place and add skippable frame");
+						skippableFrameLength = nodeEntry.dataSize - comprNode.Length - 8;
+					}
+					else if (comprNode.Length < nodeEntry.dataSize)
+					{
+						for (int i = 21; i >= -7; i--)
+						{
+							byte[] trial = Helpers.Compress(nodeData, i);
+							if (trial.Length == nodeEntry.dataSize)
+							{
+								comprNode = trial;
+								break;
+							}
+						}
+						if (comprNode.Length != nodeEntry.dataSize)
+						{
+							logger.Error("node replacement " + replacementNode + " cannot fit, support tba");
+							continue;
+						}
+					}
+					nodeData = comprNode;
+					logger.Debug("orig len: " + nodeEntry.dataSize + ", new len: " + nodeData.Length);
+				}
+
+
+				if (nodeData.Length > nodeEntry.dataSize)
+				{
+					logger.Error("node replacement " + replacementNode + " is too big, support tba");
+					continue;
+				}
+
+				bw.BaseStream.Position = nodeEntry.dataOffset;
+				bw.Write(nodeData);
+				if (skippableFrameLength >= 0)
+				{
+					bw.Write(0x184D2A50); // skippable frame magic bytes
+					bw.Write(skippableFrameLength);
+					bw.Write(new byte[skippableFrameLength]);
+				}
+				modified = true;
+			}
+			return modified;
+		}
+
+		// todo this function got too big, shouldn't necessarily decompress/resolve glommed
+		private List<NodeEntry> FindNodeMatchesInBucket(byte[] bucket, HashSet<string> targets)
+		{
+			List<NodeEntry> matches = new();
+			using var ms = new MemoryStream(bucket);
+			using var br = new BinaryReader(ms);
+
+			if (br.ReadUInt32() != 0x4B554250)
+			{
+				logger.Warning("not a valid bkt file");
+				return matches;
+			}
+
+			br.BaseStream.Position += 4;
+			uint dblbLength = br.ReadUInt32();
+			br.BaseStream.Position += dblbLength; // skip first empty DBLB
+			dblbLength = br.ReadUInt32();
+			long dblbStartOffset = br.BaseStream.Position;
+			br.BaseStream.Position += 4; // DBLB header
+
+			if (br.ReadUInt32() == 1)
+			{
+				logger.Warning("dblb version 1 not supported");
+				return matches;
+			}
+
+			while (br.BaseStream.Position + 4 < dblbStartOffset + dblbLength)
+			{
+				long entryStart = br.BaseStream.Position;
+				uint entryLength = br.ReadUInt32();
+				br.BaseStream.Position += 46; // skip to node name
+				string name = br.ReadCString();
+				//logger.Log(node);
+
+				if (targets.Contains(name))
+				{
+					logger.Debug("found " + name);
+					br.BaseStream.Position = entryStart + 16;
+					ushort bitset = br.ReadUInt16();
+					int isCompressed = bitset & 1;
+					ushort dataOffset = br.ReadUInt16();
+					br.BaseStream.Position += 16;
+					ushort numGlommed = br.ReadUInt16();
+					ushort glommedOffset = br.ReadUInt16();
+
+					int paddingLength = glommedOffset - dataOffset;
+					int dataSize = (int)entryLength - dataOffset;
+					long absDataOffset = entryStart + dataOffset;
+
+					br.BaseStream.Position = absDataOffset;
+					byte[] nodeData = br.ReadBytes(dataSize);
+
+					if (isCompressed == 1)
+					{
+						nodeData = Helpers.Decompress(nodeData);
+					}
+
+					using var nms = new MemoryStream(nodeData);
+					using var nbr = new BinaryReader(nms);
+
+					byte[] header = nbr.ReadBytes(paddingLength + numGlommed * 8);
+
+					/*
+					nbr.BaseStream.Position += paddingLength;
+					ulong[] glommedClasses = new ulong[numGlommed];
+					
+					for (int i = 0; i < numGlommed; i++)
+					{
+						glommedClasses[i] = nbr.ReadUInt64();
+					}
+					*/
+
+					byte[] strippedNodeData = nbr.ReadBytes((int)(nms.Length - nms.Position));
+
+					NodeEntry node = new()
+					{
+						name = name,
+						dataOffset = absDataOffset,
+						dataSize = dataSize,
+						isCompressed = isCompressed,
+						header = header,
+						nodeData = strippedNodeData
+
+						/*
+						paddingLength = paddingLength,
+						glommedClasses = glommedClasses,
+						*/
+					};
+
+					matches.Add(node);
+
+					targets.Remove(name);
+
+					if (targets.Count == 0)
+					{
+						break;
+					}
+				}
+				long next = entryStart + entryLength;
+				next += (8 - (next - dblbStartOffset) % 8) % 8;
+				br.BaseStream.Position = next;
+			}
+			return matches;
+		}
+
+		// todo have an option to pass the location of a file in the archive if it's known, for faster bucket file replacement
+		public void ReplaceFiles(Config config)
+		{
+			Dictionary<ulong, string> replacementsByHash = new();
+
+			// could potentially get rid of changeList and just pass everything through hashChangeList
+			foreach (var (gamePath, replacementFile) in config.changeList)
+				replacementsByHash[Helpers.FileNameToHash(gamePath)] = replacementFile;
+
+			foreach (var (hash, replacementFile) in config.hashChangeList)
+				replacementsByHash[hash] = replacementFile;
+
+			if (replacementsByHash.Count == 0)
+			{
+				logger.Error("Nothing to replace!");
+				return;
+			}
+
+			foreach (var archivePath in config.torFiles)
+			{
+				List<FileEntry> matches = FindMatchesInArchive(archivePath, replacementsByHash.Keys, out long appendPos);
+
+				if (matches.Count == 0)
+				{
+					//logger.Log($"No matches in {archivePath}");
+					continue;
+				}
+
+				logger.Debug($"Match in {archivePath}");
+
+				if (config.createBackup)
+				{
+					string backupPath = Path.Combine("backup", Path.GetFileName(archivePath));
+					if (!File.Exists(backupPath))
+						File.Copy(archivePath, backupPath, true);
+				}
+
+				ApplyReplacements(archivePath, matches, replacementsByHash, appendPos);
+
+				foreach (var match in matches)
+				{
+					replacementsByHash.Remove(match.hash);
+				}
+
+				if (replacementsByHash.Count == 0)
+				{
+					logger.Log("All replacements done.");
+					break;
+				}
+			}
+		}
 
 		public byte[] ExtractFile(Config config, string gamePath)
 		{
@@ -77,91 +433,6 @@ namespace FileChanger
 			return null;  // File not found
 		}
 
-		public byte[] ExtractNode(Config config)
-		{
-			HashSet<ulong> bucketHashes = new();
-			List<FileEntry> buckets = new();
-
-			// this was faster to do when the program starts, but it's fast anyway and saves passing the bucket list in config
-			for (int i = 0; i == BUCKET_LIMIT; i++)
-			{
-				bucketHashes.Add(Helpers.FileNameToHash("/resources/systemgenerated/buckets/" + i.ToString() + ".bkt"));
-			}
-
-			foreach (var archivePath in config.torFiles)
-			{
-				if (!archivePath.Contains("main_global_1.tor")){
-					continue;
-				}
-
-				buckets = FindMatchesInArchive(archivePath, bucketHashes, out _);
-			}
-
-			if (buckets.Count == 0)
-			{
-				logger.Error("Could not find any bkt files.");
-				return null;
-			}
-
-			foreach (FileEntry bucket in buckets)
-			{
-
-			}
-
-			return null;
-		}
-
-		public void Replace(Config config)
-		{
-			ReplaceFiles(config);
-		}
-		// doesn't replace nodes. Replace node function does that then calls this
-		// todo have an option to pass the location of a file in the archive if it's known, for faster bucket file replacement
-		public void ReplaceFiles(Config config)
-		{
-			Dictionary<ulong, string> replacementsByHash = new();
-
-			// could potentially get rid of changeList and just pass everything through hashChangeList
-			foreach (var (gamePath, replacementFile) in config.changeList)
-				replacementsByHash[Helpers.FileNameToHash(gamePath)] = replacementFile;
-
-			foreach (var (hash, replacementFile) in config.hashChangeList)
-				replacementsByHash[hash] = replacementFile;
-
-			foreach (var archivePath in config.torFiles)
-			{
-				List<FileEntry> matches = FindMatchesInArchive(archivePath, replacementsByHash.Keys, out long appendPos);
-
-				if (matches.Count == 0)
-				{
-					//logger.Log($"No matches in {archivePath}");
-					continue;
-				}
-
-				logger.Log($"Match in {archivePath}");
-
-				if (config.createBackup)
-				{
-					string backupPath = Path.Combine("backup", Path.GetFileName(archivePath));
-					if (!File.Exists(backupPath))
-						File.Copy(archivePath, backupPath, true);
-				}
-
-				ApplyReplacements(archivePath, matches, replacementsByHash, appendPos);
-
-				foreach (var match in matches)
-				{
-					replacementsByHash.Remove(match.hash);
-				}
-
-				if (replacementsByHash.Count == 0)
-				{
-					logger.Log("All replacements done.");
-					break;
-				}
-			}
-		}
-
 		// appendPos is the position after the last file table entry, where new entries can be written
 		private List<FileEntry> FindMatchesInArchive(string archivePath, ICollection<ulong> targets, out long appendPos)
 		{
@@ -176,7 +447,7 @@ namespace FileChanger
 				logger.Warning(archivePath + " is not a valid .tor archive!");
 				return matches;
 			}
-			logger.Log("Reading " +  archivePath);
+			//logger.Log("Reading " +  archivePath);
 			if (br.ReadUInt32() != 6)
 			{
 				logger.Warning("Only version 6 is supported; " + archivePath + " cannot be read!");
@@ -198,8 +469,19 @@ namespace FileChanger
 
 				for (var i = 0; i < ftCapacity && fileCount < numOfFiles; i++)
 				{
-					fileCount++;
 					ulong hash = br.ReadUInt64();
+
+					if (hash != 0)
+					{
+						fileCount++;
+					}
+
+					/*
+					if (hash == Helpers.FileNameToHash("ft.sig"))
+					{
+						logger.Debug("found ft.sig, fileCount = " + fileCount + " , numOfFiles = " + numOfFiles);
+					}
+					*/
 
 					if (targets.Contains(hash))
 					{
@@ -226,8 +508,7 @@ namespace FileChanger
 			}
 
 			appendPos = br.BaseStream.Position - 20; // undo go to hash of next entry
-
-			//logger.Log(appendPos);
+			//logger.Debug($"append: {appendPos:X8}");
 
 			return matches;
 		}
@@ -258,7 +539,7 @@ namespace FileChanger
 
 					if (comprSize + 8 <= fileEntry.comprSize)
 					{
-						logger.Log("replace in place and add skippable frame");
+						logger.Debug("replace in place and add skippable frame");
 						uint lenBlank = fileEntry.comprSize - comprSize - 8;
 						bw.BaseStream.Position = (long)(fileEntry.offset + fileEntry.metaDataSize);
 						bw.Write(data);
@@ -270,7 +551,7 @@ namespace FileChanger
 					// todo potentially compress at lighter levels to see if it matches orig length exactly, in which case replace in place
 					if (comprSize == fileEntry.comprSize)
 					{
-						logger.Log("replace in place exactly");
+						logger.Debug("replace in place exactly");
 						bw.BaseStream.Position = (long)(fileEntry.offset + fileEntry.metaDataSize);
 						bw.Write(data);
 						continue;
@@ -300,6 +581,28 @@ namespace FileChanger
 				bw.Write(fileEntry.compressionType);
 				appendPos = bw.BaseStream.Position;
 			}
+		}
+
+		public void RestoreBackup(string[] backups, string installFolder, IProgress<int> progress = null)
+		{
+			int i = 0;
+			if (backups.Length == 0)
+			{
+				logger.Warning("Nothing to restore!");
+				return;
+			}
+			foreach (var path in backups)
+			{
+				progress?.Report(i++);
+				string fileName = Path.GetFileName(path);
+				string targetPath = fileName.Equals("main_gfx_1.tor", StringComparison.OrdinalIgnoreCase)
+					? installFolder + "\\swtor\\retailclient\\" + fileName
+					: installFolder + "\\Assets\\" + fileName;
+				File.Copy(path, targetPath, true);
+				File.Delete(path);
+				logger.Debug("Replaced " + targetPath + " with " + fileName);
+			}
+			logger.Log("Finished restoring backup!");
 		}
 
 	}

@@ -11,15 +11,14 @@ namespace FileChanger
 	public interface ILogger
 	{
 		void Log(object message, LogLevel level = LogLevel.Info);
-
 		void Error(object message);
-
 		void Warning(object message);
+		void Debug(object message);
 	}
 
 	public class TextBoxLogger : ILogger
 	{
-		private RichTextBox _textBox;
+		private readonly RichTextBox _textBox;
 
 		public TextBoxLogger(RichTextBox textBox)
 		{
@@ -55,6 +54,13 @@ namespace FileChanger
 		{
 			Log(message, LogLevel.Warning);
 		}
+		public void Debug(object message)
+		{
+			if (Program.debug)
+			{
+				Log(message, LogLevel.Info);
+			}
+		}
 
 	}
 
@@ -72,16 +78,27 @@ namespace FileChanger
 		{
 			Log(message, LogLevel.Warning);
 		}
+		public void Debug(object message)
+		{
+			if (Program.debug)
+			{
+				Log(message, LogLevel.Info);
+			}
+		}
 	}
 
 	internal static class Program
 	{
+		public static bool debug = false;
 		/// <summary>
 		///  The main entry point for the application.
 		/// </summary>
 		[STAThread]
 		static void Main()
 		{
+#if DEBUG
+			debug = true;
+#endif
 			Application.EnableVisualStyles();
 			Application.SetCompatibleTextRenderingDefault(false);
 			Application.Run(new GUI());

@@ -4,7 +4,10 @@ using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.IO;
 using ZstdSharp;
+using System.Runtime.InteropServices.Marshalling;
+using System.Runtime.InteropServices;
 
 namespace FileChanger
 {
@@ -75,7 +78,6 @@ namespace FileChanger
 			return (ulong)b << 32 | c;
 		}
 
-
 		/// <summary>
 		/// Compresses raw bytes using Zstandard.
 		/// level -7 to 22 (22 is strongest compression)
@@ -100,15 +102,20 @@ namespace FileChanger
 		}
 
 		/// <summary>
-		/// read a null-terminated ASCII string at `offset` inside `buffer`
+		/// Reads a null-terminated string from the current stream.
 		/// </summary>
-		public static string ReadStringAt(byte[] buffer, int offset)
-		{
-			var sb = new StringBuilder();
-			for (int i = offset; i < buffer.Length && buffer[i] != 0; i++)
-				sb.Append((char)buffer[i]);
-			return sb.ToString();
-		}
+        public static string ReadCString(this BinaryReader reader)
+        {
+            List<byte> bytes = new();
+
+            byte b;
+            while ((b = reader.ReadByte()) != 0)
+            {
+                bytes.Add(b);
+            }
+
+            return Encoding.ASCII.GetString(CollectionsMarshal.AsSpan(bytes));
+        }
 
 	}
 }

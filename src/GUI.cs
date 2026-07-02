@@ -1,20 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
-using System.Drawing;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.IO;
 using System.Diagnostics;
 using static System.Windows.Forms.VisualStyles.VisualStyleElement;
 using Microsoft.VisualBasic;
-using System.Collections;
-using ZstdSharp;
-using System.IO.Compression;
-using System.ComponentModel.DataAnnotations;
 
 namespace FileChanger
 {
@@ -115,7 +107,7 @@ namespace FileChanger
 						case "replacenode":
 							GuiChangeList.Items.Add("Replace Node " + currentLine[1] + " by " + currentLine[2]);
 							if (!config.nodeChangeList.ContainsKey(currentLine[1]))
-								config.nodeChangeList.Add(currentLine[1], currentLine[2]);
+								config.nodeChangeList.Add(currentLine[1], Path.Combine(FILES_DIR, currentLine[2]));
 							break;
 					}
 				}
@@ -127,7 +119,7 @@ namespace FileChanger
 			{
 				return;
 			}
-			ParseSettings();
+			GuiChangeList.Invoke(new Action(ParseSettings));
 		}
 		private List<string> GetTorFileList()
 		{
@@ -173,7 +165,7 @@ namespace FileChanger
 		private async void btnExtractFile_Click(object sender, EventArgs e)
 		{
 			// TODO maybe remove Visual Basic element
-			string fileName = Interaction.InputBox("Please enter the file that should be extracted", "Extract a file");
+			string fileName = Interaction.InputBox("Enter the file that should be extracted", "Extract a file");
 			if (fileName == "")
 				return;
 
@@ -188,11 +180,11 @@ namespace FileChanger
 			{
 				string outputPath = "extracted\\" + fileName.Substring(fileName.LastIndexOf("/") + 1);
 				File.WriteAllBytes(outputPath, extractedData);
-				logger.Log("The file " + fileName + " was successfully extracted!");
+				logger.Log($"Extracted file {fileName}");
 			}
 			else
 			{
-				logger.Error("The file " + fileName + " could not be found.");
+				logger.Error($"Could not find file {fileName}");
 			}
 			progressBar.Value = 0;
 			Enabled = true;
@@ -202,18 +194,18 @@ namespace FileChanger
 		{
 			// 1) Ask for the specific node to extract
 			string nodeKey = Interaction.InputBox(
-				"Please enter the full node path to extract",
+				"Enter the full node path to extract",
 				"Extract a node"
 			);
 			if (string.IsNullOrEmpty(nodeKey)) return;
 
 			string assetsDir = Path.Combine(textInstallationFolder.Text, "Assets");
-			List<string> torFiles = Directory.GetFiles(assetsDir, "swtor_*main_global_1.tor").ToList();
+			config.torFiles = Directory.GetFiles(assetsDir, "swtor_*main_global_1.tor").ToList();
 
 			// TODO progress bar
 			Enabled = false;
 			byte[] extractedData = await Task.Run(() =>
-				replacer.ExtractNode(config));
+				replacer.ExtractNode(config, nodeKey));
 
 			if (extractedData != null)
 			{
@@ -226,11 +218,11 @@ namespace FileChanger
 					safe + ".node"
 				);
 				File.WriteAllBytes(outputPath, extractedData);
-				logger.Log($"Extracted node \"{nodeKey}\".");
+				logger.Log($"Extracted node {nodeKey}");
 			}
 			else
 			{
-				logger.Log($"Could not find node \"{nodeKey}\".");
+				logger.Error($"Could not find node {nodeKey}");
 			}
 			progressBar.Value = 0;
 			Enabled = true;
@@ -271,6 +263,7 @@ namespace FileChanger
 			config.torFiles = GetTorFileList();
 			config.createBackup = chkBackup.Checked;
 			replacer.Replace(config);
+			ParseSettings(); // to clear the change list
 		}
 	}
 }
