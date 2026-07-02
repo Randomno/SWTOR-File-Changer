@@ -32,8 +32,8 @@ namespace FileChanger
 			public int isCompressed;
 			public byte[] header;
 
-			public int paddingLength;
-			public ulong[] glommedClasses; // may be empty
+			//public int paddingLength;
+			//public ulong[] glommedClasses; // may be empty
 			public byte[] nodeData;
 		}
 
@@ -585,7 +585,6 @@ namespace FileChanger
 
 		public void RestoreBackup(string[] backups, string installFolder)
 		{
-			int i = 0;
 			if (backups.Length == 0)
 			{
 				logger.Warning("Nothing to restore!");

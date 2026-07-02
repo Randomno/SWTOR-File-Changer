@@ -26,7 +26,6 @@
     <Compile Remove="temporary.cs" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="Crc32.NET" Version="1.2.0" />
     <PackageReference Include="Microsoft.VisualBasic" Version="10.3.0" />
     <PackageReference Include="System.Runtime.CompilerServices.Unsafe" Version="6.1.2" />
     <PackageReference Include="ZstdSharp.Port" Version="0.8.5" />
