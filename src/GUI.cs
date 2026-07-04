@@ -93,19 +93,19 @@ namespace FileChanger
 					switch (replaceOp)
 					{
 						case "replace":
-							GuiChangeList.Items.Add("Replace " + currentLine[1] + " by " + currentLine[2]);
+							GuiChangeList.Items.Add("Replace " + currentLine[1] + " with " + currentLine[2]);
 							if (!config.changeList.ContainsKey(currentLine[1]))
 								config.changeList.Add(currentLine[1], Path.Combine(FILES_DIR, currentLine[2]));
 							break;
 						case "replacehash":
-							GuiChangeList.Items.Add("Replace " + currentLine[1] + " by " + currentLine[2]);
+							GuiChangeList.Items.Add("Replace " + currentLine[1] + " with " + currentLine[2]);
 							var parts = currentLine[1].Split("_");
 							ulong hash = Convert.ToUInt32(parts[0], 16) | ((ulong)Convert.ToUInt32(parts[1], 16) << 32);
 							if (!config.hashChangeList.ContainsKey(hash))
 								config.hashChangeList.Add(hash, Path.Combine(FILES_DIR, currentLine[2]));
 							break;
 						case "replacenode":
-							GuiChangeList.Items.Add("Replace Node " + currentLine[1] + " by " + currentLine[2]);
+							GuiChangeList.Items.Add("Replace node " + currentLine[1] + " with " + currentLine[2]);
 							if (!config.nodeChangeList.ContainsKey(currentLine[1]))
 								config.nodeChangeList.Add(currentLine[1], Path.Combine(FILES_DIR, currentLine[2]));
 							break;
@@ -262,7 +262,9 @@ namespace FileChanger
 		{
 			config.torFiles = GetTorFileList();
 			config.createBackup = chkBackup.Checked;
+			Enabled = false;
 			replacer.Replace(config);
+			Enabled = true;
 			ParseSettings(); // to clear the change list
 		}
 	}

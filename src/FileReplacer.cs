@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Text;
 
 namespace FileChanger
 {
@@ -26,15 +27,31 @@ namespace FileChanger
 
 		private struct NodeEntry
 		{
+			public uint entryLength;
+			public byte[] betweenLengthName;
 			public string name;
-			public long dataOffset;
+
+			public long entryStart;
+			public ushort dataOffset;
+			public long absDataOffset;
 			public int dataSize;
 			public int isCompressed;
+
 			public byte[] header;
+			public byte[] nodeData;
 
 			//public int paddingLength;
 			//public ulong[] glommedClasses; // may be empty
-			public byte[] nodeData;
+		}
+
+		// could use a generic here
+		private static long GetPadding(long value, long multiple = 8)
+		{
+			return (multiple - (value % multiple)) % multiple;
+		}
+		private static int GetPadding(int value, int multiple = 8)
+		{
+			return (multiple - (value % multiple)) % multiple;
 		}
 
 		public void Replace(Config config)
@@ -96,13 +113,13 @@ namespace FileChanger
 				if (matches.Count == 0)
 					continue;
 
-				bool modified = ApplyNodeReplacements(bucket, matches, config.nodeChangeList);
+				byte[] newBucket = ApplyNodeReplacements(bucket, matches, config.nodeChangeList, out bool modified);
 				if (!modified)
 					continue;
 
-				// todo don't do this since it's tied to gui config, but not sure how to do properly
+				// todo don't do this since it's tied to gui config, make an in-memory replace option instead
 				string fullPath = Path.Combine("files", entry.hash.ToString() + ".txt");
-				File.WriteAllBytes(fullPath, bucket);
+				File.WriteAllBytes(fullPath, newBucket);
 				config.hashChangeList.Add(entry.hash, fullPath);
 			}
 
@@ -167,15 +184,21 @@ namespace FileChanger
 			return null;
 		}
 
-		private bool ApplyNodeReplacements(byte[] bucket, List<NodeEntry> matches, Dictionary<string, string> nodeChangeList)
+		// assuming matches is sorted by where they appear in bucket
+		private byte[] ApplyNodeReplacements(byte[] bucket, List<NodeEntry> matches, Dictionary<string, string> nodeChangeList, out bool modified)
 		{
+			/*
 			using var ms = new MemoryStream(bucket);
 			using var bw = new BinaryWriter(ms);
-			bool modified = false;
+			*/
+			modified = false;
 
-			foreach (NodeEntry nodeEntry in matches)
+			var bucketList = new List<byte>(bucket);
+			long accumOffset = 0;
+
+			foreach (NodeEntry origNode in matches)
 			{
-				string replacementNode = nodeChangeList[nodeEntry.name];
+				string replacementNode = nodeChangeList[origNode.name];
 
 				if (!File.Exists(replacementNode))
 				{
@@ -190,61 +213,87 @@ namespace FileChanger
 					logger.Warning("replacement node " + replacementNode + " starts with 0, this will likely cause an error");
 				}
 
-				byte[] nodeData = new byte[nodeEntry.header.Length + strippedNodeData.Length];
+				byte[] nodeData = new byte[origNode.header.Length + strippedNodeData.Length];
 
-				nodeEntry.header.CopyTo(nodeData, 0);
-				strippedNodeData.CopyTo(nodeData, nodeEntry.header.Length);
+				origNode.header.CopyTo(nodeData, 0);
+				strippedNodeData.CopyTo(nodeData, origNode.header.Length);
 
-				int skippableFrameLength = -1;
-
-				if (nodeEntry.isCompressed == 1)
+				if (origNode.isCompressed == 1)
 				{
 					byte[] comprNode = Helpers.Compress(nodeData, 22);
 
-					if (comprNode.Length + 8 <= nodeEntry.dataSize)
+					if (comprNode.Length + 8 <= origNode.dataSize)
 					{
 						logger.Debug("replace node in place and add skippable frame");
-						skippableFrameLength = nodeEntry.dataSize - comprNode.Length - 8;
+						int skippableFrameLength = origNode.dataSize - comprNode.Length - 8;
+						byte[] appended = new byte[origNode.dataSize];
+						comprNode.CopyTo(appended, 0);
+						BitConverter.GetBytes(0x184D2A50).CopyTo(appended, comprNode.Length); // skippable frame magic bytes
+						BitConverter.GetBytes(skippableFrameLength).CopyTo(appended, comprNode.Length + 4);
+						comprNode = appended;
 					}
-					else if (comprNode.Length < nodeEntry.dataSize)
+					else if (comprNode.Length < origNode.dataSize)
 					{
 						for (int i = 21; i >= -7; i--)
 						{
 							byte[] trial = Helpers.Compress(nodeData, i);
-							if (trial.Length == nodeEntry.dataSize)
+							if (trial.Length == origNode.dataSize)
 							{
 								comprNode = trial;
 								break;
 							}
 						}
-						if (comprNode.Length != nodeEntry.dataSize)
-						{
-							logger.Error("node replacement " + replacementNode + " cannot fit, support tba");
-							continue;
-						}
 					}
 					nodeData = comprNode;
-					logger.Debug("orig len: " + nodeEntry.dataSize + ", new len: " + nodeData.Length);
+					logger.Debug("orig len: " + origNode.dataSize + ", new len: " + nodeData.Length);
 				}
 
+				long adjustedEntryStart = origNode.entryStart + accumOffset;
 
-				if (nodeData.Length > nodeEntry.dataSize)
+				if (nodeData.Length != origNode.dataSize)
 				{
-					logger.Error("node replacement " + replacementNode + " is too big, support tba");
-					continue;
-				}
+					int origPadding = GetPadding((int)origNode.entryLength);
+					int origLength = (int)origNode.entryLength + origPadding;
 
-				bw.BaseStream.Position = nodeEntry.dataOffset;
-				bw.Write(nodeData);
-				if (skippableFrameLength >= 0)
-				{
-					bw.Write(0x184D2A50); // skippable frame magic bytes
-					bw.Write(skippableFrameLength);
-					bw.Write(new byte[skippableFrameLength]);
+					int newLength = 50 + origNode.name.Length + 2 + nodeData.Length; // header + name + 2 null terminators + data
+					int padding = GetPadding(newLength);
+					byte[] replacementEntry = new byte[newLength + padding];
+
+					using var nms = new MemoryStream(replacementEntry);
+					using var nbw = new BinaryWriter(nms);
+
+					nbw.Write(newLength);
+					nbw.Write(origNode.betweenLengthName[..36]);
+					nbw.Write(strippedNodeData.Length);
+					nbw.Write(origNode.betweenLengthName[40..]);
+					nbw.Write(Encoding.ASCII.GetBytes(origNode.name));
+					nbw.Write((short)0);
+					nbw.Write(nodeData);
+
+					bucketList.RemoveRange((int)adjustedEntryStart, origLength);
+					bucketList.InsertRange((int)adjustedEntryStart, replacementEntry);
+
+					accumOffset += (newLength + padding) - origLength;
 				}
+				else
+				{
+					for (int i = 0; i < nodeData.Length; i++)
+						bucketList[(int)adjustedEntryStart + origNode.dataOffset + i] = nodeData[i];
+				}
+				
 				modified = true;
 			}
-			return modified;
+
+			if (accumOffset != 0)
+			{
+				uint oldSectionLength = BitConverter.ToUInt32(bucketList.GetRange(24, 4).ToArray(), 0);
+				uint newSectionLength = (uint)(oldSectionLength + accumOffset);
+				byte[] lengthBytes = BitConverter.GetBytes(newSectionLength);
+				for (int i = 0; i < 4; i++)
+					bucketList[24 + i] = lengthBytes[i];
+			}
+
+			return bucketList.ToArray();
 		}
 
 		// todo this function got too big, shouldn't necessarily decompress/resolve glommed
@@ -265,6 +314,12 @@ namespace FileChanger
 			br.BaseStream.Position += dblbLength; // skip first empty DBLB
 			dblbLength = br.ReadUInt32();
 			long dblbStartOffset = br.BaseStream.Position;
+
+			if (dblbStartOffset != 28)
+			{
+				logger.Warning("expected dblbStartOffset of 28, instead: " + dblbStartOffset);
+			}
+
 			br.BaseStream.Position += 4; // DBLB header
 
 			if (br.ReadUInt32() == 1)
@@ -277,7 +332,7 @@ namespace FileChanger
 			{
 				long entryStart = br.BaseStream.Position;
 				uint entryLength = br.ReadUInt32();
-				br.BaseStream.Position += 46; // skip to node name
+				byte[] betweenLengthName = br.ReadBytes(46); // skip to node name
 				string name = br.ReadCString();
 				//logger.Log(node);
 
@@ -323,8 +378,12 @@ namespace FileChanger
 
 					NodeEntry node = new()
 					{
+						entryLength = entryLength,
+						betweenLengthName = betweenLengthName,
 						name = name,
-						dataOffset = absDataOffset,
+						entryStart = entryStart,
+						dataOffset = dataOffset,
+						absDataOffset = absDataOffset,
 						dataSize = dataSize,
 						isCompressed = isCompressed,
 						header = header,
@@ -346,7 +405,7 @@ namespace FileChanger
 					}
 				}
 				long next = entryStart + entryLength;
-				next += (8 - (next - dblbStartOffset) % 8) % 8;
+				next += GetPadding(next - dblbStartOffset);
 				br.BaseStream.Position = next;
 			}
 			return matches;
@@ -399,9 +458,11 @@ namespace FileChanger
 				if (replacementsByHash.Count == 0)
 				{
 					logger.Log("All replacements done.");
-					break;
+					return;
 				}
 			}
+
+			logger.Warning("some file names were not found in archives");
 		}
 
 		public byte[] ExtractFile(Config config, string gamePath)
