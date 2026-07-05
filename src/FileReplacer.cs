@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
+using System.Windows.Forms;
 
 namespace FileChanger
 {
@@ -86,8 +87,8 @@ namespace FileChanger
 				}
 
 				mainGlobalPath = archivePath;
-
 				buckets = FindMatchesInArchive(archivePath, bucketHashes, out _);
+				break;
 			}
 
 			if (buckets.Count == 0)
@@ -142,8 +143,8 @@ namespace FileChanger
 				}
 
 				mainGlobalPath = archivePath;
-
 				buckets = FindMatchesInArchive(archivePath, bucketHashes, out _);
+				break;
 			}
 
 			if (buckets.Count == 0)
@@ -193,13 +194,13 @@ namespace FileChanger
 			*/
 			modified = false;
 
-			var bucketList = new List<byte>(bucket);
 			long accumOffset = 0;
+			using MemoryStream output = new(bucket.Length);
+			long pos = 0;
 
 			foreach (NodeEntry origNode in matches)
 			{
 				string replacementNode = nodeChangeList[origNode.name];
-
 				if (!File.Exists(replacementNode))
 				{
 					logger.Warning("File " + replacementNode + " could not be found.");
@@ -207,53 +208,26 @@ namespace FileChanger
 				}
 
 				byte[] strippedNodeData = File.ReadAllBytes(replacementNode);
-
 				if (strippedNodeData[0] == 0)
 				{
 					logger.Warning("replacement node " + replacementNode + " starts with 0, this will likely cause an error");
 				}
 
 				byte[] nodeData = new byte[origNode.header.Length + strippedNodeData.Length];
-
 				origNode.header.CopyTo(nodeData, 0);
 				strippedNodeData.CopyTo(nodeData, origNode.header.Length);
 
 				if (origNode.isCompressed == 1)
-				{
-					byte[] comprNode = Helpers.Compress(nodeData, 22);
-
-					if (comprNode.Length + 8 <= origNode.dataSize)
-					{
-						logger.Debug("replace node in place and add skippable frame");
-						int skippableFrameLength = origNode.dataSize - comprNode.Length - 8;
-						byte[] appended = new byte[origNode.dataSize];
-						comprNode.CopyTo(appended, 0);
-						BitConverter.GetBytes(0x184D2A50).CopyTo(appended, comprNode.Length); // skippable frame magic bytes
-						BitConverter.GetBytes(skippableFrameLength).CopyTo(appended, comprNode.Length + 4);
-						comprNode = appended;
-					}
-					else if (comprNode.Length < origNode.dataSize)
-					{
-						for (int i = 21; i >= -7; i--)
-						{
-							byte[] trial = Helpers.Compress(nodeData, i);
-							if (trial.Length == origNode.dataSize)
-							{
-								comprNode = trial;
-								break;
-							}
-						}
-					}
-					nodeData = comprNode;
-					logger.Debug("orig len: " + origNode.dataSize + ", new len: " + nodeData.Length);
-				}
+					nodeData = CompressNodeToFit(nodeData, origNode.dataSize);
 
 				long adjustedEntryStart = origNode.entryStart + accumOffset;
+				// copy unchanged bytes since last replacement
+				output.Write(bucket, (int)pos, (int)(origNode.entryStart - pos));
 
 				if (nodeData.Length != origNode.dataSize)
 				{
 					int origPadding = GetPadding((int)origNode.entryLength);
-					int origLength = (int)origNode.entryLength + origPadding;
+					int origPaddedLength = (int)origNode.entryLength + origPadding;
 
 					int newLength = 50 + origNode.name.Length + 2 + nodeData.Length; // header + name + 2 null terminators + data
 					int padding = GetPadding(newLength);
@@ -270,30 +244,62 @@ namespace FileChanger
 					nbw.Write((short)0);
 					nbw.Write(nodeData);
 
-					bucketList.RemoveRange((int)adjustedEntryStart, origLength);
-					bucketList.InsertRange((int)adjustedEntryStart, replacementEntry);
-
-					accumOffset += (newLength + padding) - origLength;
+					output.Write(replacementEntry);
+					pos = origNode.entryStart + origPaddedLength;
+					accumOffset += (newLength + padding) - origPaddedLength;
 				}
 				else
 				{
-					for (int i = 0; i < nodeData.Length; i++)
-						bucketList[(int)adjustedEntryStart + origNode.dataOffset + i] = nodeData[i];
+					output.Write(bucket, (int)origNode.entryStart, origNode.dataOffset);
+					output.Write(nodeData);
+					pos = origNode.entryStart + origNode.entryLength;
 				}
 				
 				modified = true;
 			}
 
+			output.Write(bucket, (int)pos, bucket.Length - (int)pos);
+
+			byte[] result = output.ToArray();
+
 			if (accumOffset != 0)
 			{
-				uint oldSectionLength = BitConverter.ToUInt32(bucketList.GetRange(24, 4).ToArray(), 0);
+				uint oldSectionLength = BitConverter.ToUInt32(bucket, 24);
 				uint newSectionLength = (uint)(oldSectionLength + accumOffset);
-				byte[] lengthBytes = BitConverter.GetBytes(newSectionLength);
-				for (int i = 0; i < 4; i++)
-					bucketList[24 + i] = lengthBytes[i];
+				BitConverter.GetBytes(newSectionLength).CopyTo(result, 24);
 			}
 
-			return bucketList.ToArray();
+			return result;
+		}
+
+		private byte[] CompressNodeToFit(byte[] nodeData, int targetSize)
+		{
+			byte[] comprNode = Helpers.Compress(nodeData, 22);
+
+			if (comprNode.Length + 8 <= targetSize)
+			{
+				logger.Debug("replace node in place and add skippable frame");
+				int skippableFrameLength = targetSize - comprNode.Length - 8;
+				byte[] appended = new byte[targetSize];
+				comprNode.CopyTo(appended, 0);
+				BitConverter.GetBytes(0x184D2A50).CopyTo(appended, comprNode.Length); // skippable frame magic bytes
+				BitConverter.GetBytes(skippableFrameLength).CopyTo(appended, comprNode.Length + 4);
+				return appended;
+			}
+			
+			if (comprNode.Length < targetSize)
+			{
+				for (int i = 21; i >= -7; i--)
+				{
+					byte[] trial = Helpers.Compress(nodeData, i);
+					if (trial.Length == targetSize)
+					{
+						return trial;
+					}
+				}
+			}
+			logger.Debug("orig len: " + targetSize + ", new len: " + nodeData.Length);
+			return comprNode;
 		}
 
 		// todo this function got too big, shouldn't necessarily decompress/resolve glommed
