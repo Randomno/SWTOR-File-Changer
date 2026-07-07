@@ -2,14 +2,16 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
-using System.Windows.Forms;
+using System.Linq;
 
 namespace FileChanger
 {
 	public class FileReplacer
 	{
 		private readonly int BUCKET_LIMIT = 996;
+		private static readonly string[] DependentExtensions = { ".jba", ".mat", ".tex", ".tiny.dds" };
 		private readonly ILogger logger;
+
 		public FileReplacer(ILogger logger = null)
 		{
 			this.logger = logger ?? new ConsoleLogger();
@@ -19,8 +21,8 @@ namespace FileChanger
 		{
 			public ulong offset;
 			public uint metaDataSize;
-			public uint comprSize;
-			public uint uncomprSize;
+			public uint storedSize; // size as stored in archive
+			public uint uncomprSize; // equal to stored size for uncompressed files
 			public ulong hash;
 			public uint metaDataChecksum;
 			public ushort compressionType;
@@ -103,7 +105,7 @@ namespace FileChanger
 			foreach (FileEntry entry in buckets)
 			{
 				br.BaseStream.Position = (long)(entry.offset + entry.metaDataSize);
-				byte[] bucket = br.ReadBytes((int)entry.comprSize);
+				byte[] bucket = br.ReadBytes((int)entry.storedSize);
 
 				if (entry.compressionType == 1)
 					bucket = Helpers.Decompress(bucket);
@@ -159,7 +161,7 @@ namespace FileChanger
 			foreach (FileEntry entry in buckets)
 			{
 				br.BaseStream.Position = (long)(entry.offset + entry.metaDataSize);
-				byte[] bucket = br.ReadBytes((int)entry.comprSize);
+				byte[] bucket = br.ReadBytes((int)entry.storedSize);
 
 				if (entry.compressionType == 1)
 					bucket = Helpers.Decompress(bucket);
@@ -218,43 +220,35 @@ namespace FileChanger
 				strippedNodeData.CopyTo(nodeData, origNode.header.Length);
 
 				if (origNode.isCompressed == 1)
-					nodeData = CompressNodeToFit(nodeData, origNode.dataSize);
+					nodeData = Helpers.Compress(nodeData, 22);
 
 				long adjustedEntryStart = origNode.entryStart + accumOffset;
+
 				// copy unchanged bytes since last replacement
 				output.Write(bucket, (int)pos, (int)(origNode.entryStart - pos));
 
-				if (nodeData.Length != origNode.dataSize)
-				{
-					int origPadding = GetPadding((int)origNode.entryLength);
-					int origPaddedLength = (int)origNode.entryLength + origPadding;
+				int origPadding = GetPadding((int)origNode.entryLength);
+				int origPaddedLength = (int)origNode.entryLength + origPadding;
 
-					int newLength = 50 + origNode.name.Length + 2 + nodeData.Length; // header + name + 2 null terminators + data
-					int padding = GetPadding(newLength);
-					byte[] replacementEntry = new byte[newLength + padding];
+				int newLength = 50 + origNode.name.Length + 2 + nodeData.Length; // header + name + 2 null terminators + data
+				int padding = GetPadding(newLength);
+				byte[] replacementEntry = new byte[newLength + padding];
 
-					using var nms = new MemoryStream(replacementEntry);
-					using var nbw = new BinaryWriter(nms);
+				using var nms = new MemoryStream(replacementEntry);
+				using var nbw = new BinaryWriter(nms);
 
-					nbw.Write(newLength);
-					nbw.Write(origNode.betweenLengthName[..36]);
-					nbw.Write(strippedNodeData.Length);
-					nbw.Write(origNode.betweenLengthName[40..]);
-					nbw.Write(Encoding.ASCII.GetBytes(origNode.name));
-					nbw.Write((short)0);
-					nbw.Write(nodeData);
+				nbw.Write(newLength);
+				nbw.Write(origNode.betweenLengthName[..36]);
+				nbw.Write(strippedNodeData.Length);
+				nbw.Write(origNode.betweenLengthName[40..]);
+				nbw.Write(Encoding.ASCII.GetBytes(origNode.name));
+				nbw.Write((short)0);
+				nbw.Write(nodeData);
 
-					output.Write(replacementEntry);
-					pos = origNode.entryStart + origPaddedLength;
-					accumOffset += (newLength + padding) - origPaddedLength;
-				}
-				else
-				{
-					output.Write(bucket, (int)origNode.entryStart, origNode.dataOffset);
-					output.Write(nodeData);
-					pos = origNode.entryStart + origNode.entryLength;
-				}
-				
+				output.Write(replacementEntry);
+				pos = origNode.entryStart + origPaddedLength;
+				accumOffset += (newLength + padding) - origPaddedLength;
+
 				modified = true;
 			}
 
@@ -272,6 +266,8 @@ namespace FileChanger
 			return result;
 		}
 
+		/*
+		// previously was trying to fit node in original position, but not worth the trouble
 		private byte[] CompressNodeToFit(byte[] nodeData, int targetSize)
 		{
 			byte[] comprNode = Helpers.Compress(nodeData, 22);
@@ -298,9 +294,10 @@ namespace FileChanger
 					}
 				}
 			}
-			logger.Debug("orig len: " + targetSize + ", new len: " + nodeData.Length);
+			logger.Debug("orig len: " + targetSize + ", new len: " + comprNode.Length);
 			return comprNode;
 		}
+		*/
 
 		// todo this function got too big, shouldn't necessarily decompress/resolve glommed
 		private List<NodeEntry> FindNodeMatchesInBucket(byte[] bucket, HashSet<string> targets)
@@ -420,14 +417,22 @@ namespace FileChanger
 		// todo have an option to pass the location of a file in the archive if it's known, for faster bucket file replacement
 		public void ReplaceFiles(Config config)
 		{
+			// todo I don't like having 2 dictionaries and passing both to ApplyReplacements
 			Dictionary<ulong, string> replacementsByHash = new();
+			Dictionary<ulong, string> namesByHash = new();
 
-			// could potentially get rid of changeList and just pass everything through hashChangeList
 			foreach (var (gamePath, replacementFile) in config.changeList)
-				replacementsByHash[Helpers.FileNameToHash(gamePath)] = replacementFile;
+			{
+				ulong hash = Helpers.FileNameToHash(gamePath);
+				replacementsByHash[hash] = replacementFile;
+				namesByHash[hash] = gamePath;
+			}
 
 			foreach (var (hash, replacementFile) in config.hashChangeList)
+			{
 				replacementsByHash[hash] = replacementFile;
+				namesByHash[hash] = Helpers.HashToString(hash);
+			}
 
 			if (replacementsByHash.Count == 0)
 			{
@@ -454,7 +459,7 @@ namespace FileChanger
 						File.Copy(archivePath, backupPath, true);
 				}
 
-				ApplyReplacements(archivePath, matches, replacementsByHash, appendPos);
+				ApplyReplacements(archivePath, matches, replacementsByHash, namesByHash, appendPos);
 
 				foreach (var match in matches)
 				{
@@ -468,7 +473,10 @@ namespace FileChanger
 				}
 			}
 
-			logger.Warning("some file names were not found in archives");
+			foreach (var hash in replacementsByHash.Keys)
+			{
+				logger.Warning("File " + namesByHash[hash] + " was not found in game archives");
+			}
 		}
 
 		public byte[] ExtractFile(Config config, string gamePath)
@@ -489,7 +497,7 @@ namespace FileChanger
 				using BinaryReader br = new(archive);
 
 				br.BaseStream.Position = (long)(fileEntry.offset + fileEntry.metaDataSize);
-				byte[] file = br.ReadBytes((int)fileEntry.comprSize);
+				byte[] file = br.ReadBytes((int)fileEntry.storedSize);
 
 				if (fileEntry.compressionType == 1)
 					file = Helpers.Decompress(file);
@@ -558,9 +566,9 @@ namespace FileChanger
 						{
 							offset = br.ReadUInt64(),
 							metaDataSize = br.ReadUInt32(),
-							comprSize = br.ReadUInt32(),
+							storedSize = br.ReadUInt32(),
 							uncomprSize = br.ReadUInt32(),
-							hash = br.ReadUInt64(),					// read to make the initialiser nicer
+							hash = br.ReadUInt64(),					// read again to make the initialiser nicer
 							metaDataChecksum = br.ReadUInt32(),
 							compressionType = br.ReadUInt16()
 						};
@@ -580,7 +588,7 @@ namespace FileChanger
 			return matches;
 		}
 
-		private void ApplyReplacements(string archivePath, List<FileEntry> matches, Dictionary<ulong, string> replacementsByHash, long appendPos)
+		private void ApplyReplacements(string archivePath, List<FileEntry> matches, Dictionary<ulong, string> replacementsByHash, Dictionary<ulong, string> namesByHash, long appendPos)
 		{
 			using FileStream output = new(archivePath, FileMode.Open, FileAccess.Write, FileShare.Read);
 			using BinaryWriter bw = new(output);
@@ -595,19 +603,31 @@ namespace FileChanger
 					continue;
 				}
 
+
 				byte[] data = File.ReadAllBytes(replacementFile);
 				uint uncomprSize = (uint)data.Length;
-				uint comprSize = uncomprSize; // identical to uncomprSize for uncompressed files
+				uint storedSize = uncomprSize; // overwritten below if compressed
 
 				if (fileEntry.compressionType == 1)
 				{
 					data = Helpers.Compress(data, 22);
-					comprSize = (uint)data.Length;
+					storedSize = (uint)data.Length;
+				}
 
-					if (comprSize + 8 <= fileEntry.comprSize)
+				// this will fail for replacehash dependents, but will anyone ever need that?
+				bool isDependent = DependentExtensions.Contains(Helpers.GetFullExtension(namesByHash[fileEntry.hash]));
+
+				// todo is replace in place safe where uncompressed is smaller than original? depends on file type?
+				bool canReplaceInPlace = !isDependent
+					&& uncomprSize <= fileEntry.uncomprSize
+					&& storedSize <= fileEntry.storedSize;
+
+				if (canReplaceInPlace)
+				{
+					if (fileEntry.compressionType == 1 && storedSize + 8 <= fileEntry.storedSize)
 					{
 						logger.Debug("replace in place and add skippable frame");
-						uint lenBlank = fileEntry.comprSize - comprSize - 8;
+						uint lenBlank = fileEntry.storedSize - storedSize - 8;
 						bw.BaseStream.Position = (long)(fileEntry.offset + fileEntry.metaDataSize);
 						bw.Write(data);
 						bw.Write(0x184D2A50); // skippable frame magic bytes
@@ -615,8 +635,9 @@ namespace FileChanger
 						bw.Write(new byte[lenBlank]);
 						continue;
 					}
+
 					// todo potentially compress at lighter levels to see if it matches orig length exactly, in which case replace in place
-					if (comprSize == fileEntry.comprSize)
+					if (storedSize == fileEntry.storedSize)
 					{
 						logger.Debug("replace in place exactly");
 						bw.BaseStream.Position = (long)(fileEntry.offset + fileEntry.metaDataSize);
@@ -624,16 +645,8 @@ namespace FileChanger
 						continue;
 					}
 				}
-				else
-				{
-					// todo replace in place for uncompressed files when safe to have trailing zeros, but need to identify safe files somehow (e.g. by extension)
-					if (data.Length == fileEntry.uncomprSize)
-					{
-						bw.BaseStream.Position = (long)(fileEntry.offset + fileEntry.metaDataSize);
-						bw.Write(data);
-						continue;
-					}
-				}
+
+				logger.Debug("replace at end of archive");
 				// important todo new file table if necessary
 				bw.Seek(0, SeekOrigin.End);
 				ulong position = (ulong)bw.BaseStream.Position;
@@ -641,7 +654,7 @@ namespace FileChanger
 				bw.BaseStream.Position = appendPos;
 				bw.Write(position);
 				bw.Write(0);
-				bw.Write(comprSize);
+				bw.Write(storedSize);
 				bw.Write(uncomprSize);
 				bw.Write(fileEntry.hash);
 				bw.Write(0xDEADBEEF);

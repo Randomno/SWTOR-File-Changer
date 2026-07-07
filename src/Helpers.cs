@@ -117,5 +117,29 @@ namespace FileChanger
             return Encoding.ASCII.GetString(CollectionsMarshal.AsSpan(bytes));
         }
 
+		private static readonly string[] SpecialExtensions = {".tiny.dds", ".lod.gr2", ".spt.gr2", ".mph.amx", ".h.fx", ".spt.collision"};
+
+		/// <summary>
+		/// Returns the extension of a game path, accounting for special extensions like .tiny.dds
+		/// </summary>
+		public static string GetFullExtension(string path)
+		{
+			string fileName = Path.GetFileName(path);
+
+			foreach (string ext in SpecialExtensions)
+			{
+				if (fileName.EndsWith(ext, StringComparison.Ordinal))
+					return ext;
+			}
+
+			return Path.GetExtension(fileName);
+		}
+		public static string HashToString(ulong hash)
+		{
+			uint primary = (uint)(hash & 0xFFFFFFFF);
+			uint secondary = (uint)(hash >> 32);
+			return $"{primary:X8}_{secondary:X8}";
+		}
+
 	}
 }
