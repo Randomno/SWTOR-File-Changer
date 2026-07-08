@@ -117,6 +117,36 @@ namespace FileChanger
             return Encoding.ASCII.GetString(CollectionsMarshal.AsSpan(bytes));
         }
 
+		public static long ReadVarInt(this BinaryReader reader)
+		{
+			byte firstChar = reader.ReadByte();
+
+			// unsure about 0xD0 to 0xFF
+			if (firstChar < 0xC0)
+				return firstChar;
+
+			if (firstChar > 0xCF)
+			{
+				//Console.WriteLine($"first byte of varint was 0x{firstChar:X2}");
+			}
+
+			bool negative = firstChar < 0xC8;
+			int byteCount = (firstChar & 0x07) + 1;
+
+			ulong value = 0;
+
+			for (int i = 0; i < byteCount; i++)
+			{
+				value = (value << 8) | reader.ReadByte();
+			}
+
+			// might have overflow issues?
+			if (negative)
+				return -(long)value;
+
+			return (long)value;
+		}
+
 		private static readonly string[] SpecialExtensions = {".tiny.dds", ".lod.gr2", ".spt.gr2", ".mph.amx", ".h.fx", ".spt.collision"};
 
 		/// <summary>

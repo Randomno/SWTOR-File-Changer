@@ -43,6 +43,7 @@
 			radioEnvPTS = new System.Windows.Forms.RadioButton();
 			radioEnvLive = new System.Windows.Forms.RadioButton();
 			btnSettings = new System.Windows.Forms.Button();
+			NodeEditor = new System.Windows.Forms.Button();
 			SuspendLayout();
 			// 
 			// btnChangeFiles
@@ -206,11 +207,22 @@
 			btnSettings.UseVisualStyleBackColor = true;
 			btnSettings.Click += btnSettings_Click;
 			// 
+			// NodeEditor
+			// 
+			NodeEditor.Location = new System.Drawing.Point(527, 40);
+			NodeEditor.Name = "NodeEditor";
+			NodeEditor.Size = new System.Drawing.Size(110, 29);
+			NodeEditor.TabIndex = 15;
+			NodeEditor.Text = "Node Editor";
+			NodeEditor.UseVisualStyleBackColor = true;
+			NodeEditor.Click += NodeEditor_Click;
+			// 
 			// GUI
 			// 
 			AutoScaleDimensions = new System.Drawing.SizeF(7F, 15F);
 			AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
 			ClientSize = new System.Drawing.Size(858, 578);
+			Controls.Add(NodeEditor);
 			Controls.Add(btnSettings);
 			Controls.Add(radioEnvLive);
 			Controls.Add(radioEnvPTS);
@@ -248,5 +260,6 @@
 		private System.Windows.Forms.RadioButton radioEnvPTS;
 		private System.Windows.Forms.RadioButton radioEnvLive;
 		private System.Windows.Forms.Button btnSettings;
+		private System.Windows.Forms.Button NodeEditor;
 	}
 }

@@ -87,7 +87,7 @@ namespace FileChanger
 			for (int index = 0; index < settingsLines.Length; index++)
 			{
 				string[] currentLine = settingsLines[index].Split(' ');
-				if (currentLine.Length >=3)
+				if (currentLine.Length >= 3)
 				{
 					string replaceOp = currentLine[0].ToLower();
 					switch (replaceOp)
@@ -266,6 +266,12 @@ namespace FileChanger
 			replacer.Replace(config);
 			Enabled = true;
 			ParseSettings(); // to clear the change list
+		}
+
+		private void NodeEditor_Click(object sender, EventArgs e)
+		{
+			NodeGui nodeEditor = new(logger);
+			nodeEditor.Show();
 		}
 	}
 }
