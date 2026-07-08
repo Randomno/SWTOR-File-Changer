@@ -19,6 +19,7 @@ namespace FileChanger
 
 		private struct FileEntry
 		{
+			public long tableOffset; // offset of file table entry
 			public ulong offset;
 			public uint metaDataSize;
 			public uint storedSize; // size as stored in archive
@@ -564,6 +565,7 @@ namespace FileChanger
 						br.BaseStream.Position -= 28; // go back to start of entry
 						FileEntry fileEntry = new()
 						{
+							tableOffset = br.BaseStream.Position,
 							offset = br.ReadUInt64(),
 							metaDataSize = br.ReadUInt32(),
 							storedSize = br.ReadUInt32(),
@@ -617,12 +619,8 @@ namespace FileChanger
 				// this will fail for replacehash dependents, but will anyone ever need that?
 				bool isDependent = DependentExtensions.Contains(Helpers.GetFullExtension(namesByHash[fileEntry.hash]));
 
-				// todo is replace in place safe where uncompressed is smaller than original? depends on file type?
-				bool canReplaceInPlace = !isDependent
-					&& uncomprSize <= fileEntry.uncomprSize
-					&& storedSize <= fileEntry.storedSize;
-
-				if (canReplaceInPlace)
+				if (!isDependent
+					&& storedSize <= fileEntry.storedSize)
 				{
 					if (fileEntry.compressionType == 1 && storedSize + 8 <= fileEntry.storedSize)
 					{
@@ -633,15 +631,20 @@ namespace FileChanger
 						bw.Write(0x184D2A50); // skippable frame magic bytes
 						bw.Write(lenBlank);
 						bw.Write(new byte[lenBlank]);
+						bw.BaseStream.Position = fileEntry.tableOffset + 16; // uncomprSize offset
+						bw.Write(uncomprSize);
 						continue;
 					}
 
 					// todo potentially compress at lighter levels to see if it matches orig length exactly, in which case replace in place
+					// todo is replace in place safe where uncompressed is smaller than original? depends on file type?
 					if (storedSize == fileEntry.storedSize)
 					{
 						logger.Debug("replace in place exactly");
 						bw.BaseStream.Position = (long)(fileEntry.offset + fileEntry.metaDataSize);
 						bw.Write(data);
+						bw.BaseStream.Position = fileEntry.tableOffset + 16; // uncomprSize offset
+						bw.Write(uncomprSize);
 						continue;
 					}
 				}
