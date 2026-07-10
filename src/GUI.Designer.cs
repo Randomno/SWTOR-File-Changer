@@ -209,11 +209,11 @@
 			// 
 			// NodeEditor
 			// 
-			NodeEditor.Location = new System.Drawing.Point(527, 40);
+			NodeEditor.Location = new System.Drawing.Point(508, 40);
 			NodeEditor.Name = "NodeEditor";
-			NodeEditor.Size = new System.Drawing.Size(110, 29);
+			NodeEditor.Size = new System.Drawing.Size(129, 29);
 			NodeEditor.TabIndex = 15;
-			NodeEditor.Text = "Node Editor";
+			NodeEditor.Text = "Node Editor (WIP)";
 			NodeEditor.UseVisualStyleBackColor = true;
 			NodeEditor.Click += NodeEditor_Click;
 			// 
