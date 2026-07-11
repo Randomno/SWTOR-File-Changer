@@ -5,7 +5,7 @@
     <AssemblyName>SWTOR-File-Changer</AssemblyName>
     <LangVersion>10.0</LangVersion>
     <ApplicationVersion>1.0.0.0</ApplicationVersion>
-    <RootNamespace>SWTOR_File_Changer</RootNamespace>
+    <RootNamespace>FileChanger</RootNamespace>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
     <UseWindowsForms>true</UseWindowsForms>
     <ImportWindowsDesktopTargets>true</ImportWindowsDesktopTargets>

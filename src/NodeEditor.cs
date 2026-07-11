@@ -8,14 +8,13 @@ using System.Threading.Tasks;
 using System.Drawing;
 using System.Windows.Forms;
 
-namespace FileChanger
-{
+namespace FileChanger;
+
     class NodeEditor
     {
-		private readonly ILogger logger;
-		public NodeEditor(ILogger logger = null)
+	private readonly ILogger logger;
+	public NodeEditor(ILogger logger = null)
         {
             this.logger = logger ?? new ConsoleLogger();
         }
     }
-}
