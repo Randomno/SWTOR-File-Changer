@@ -215,6 +215,7 @@ partial class GUI
 		NodeEditor.TabIndex = 15;
 		NodeEditor.Text = "Node Editor (WIP)";
 		NodeEditor.UseVisualStyleBackColor = true;
+		NodeEditor.Visible = false;
 		NodeEditor.Click += NodeEditor_Click;
 		// 
 		// GUI
